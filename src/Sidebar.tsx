@@ -93,7 +93,7 @@ export default function Sidebar({ selectedRoadType, onSelect, inspectedObject, o
           ))}
         </div>
         <p className="mt-3 text-xs text-white/40 text-center leading-tight">
-          Right-click to rotate
+          R to rotate · right-click to stop placing
         </p>
       </Section>
 

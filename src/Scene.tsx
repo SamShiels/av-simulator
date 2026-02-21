@@ -41,6 +41,9 @@ export default function Scene({
 }: Props) {
   const { gl, camera } = useThree();
   const [ghost, setGhost] = useState<[number, number, number] | null>(null);
+  const [placing, setPlacing] = useState(true);
+  const placingRef = useRef(true);
+  placingRef.current = placing;
 
   // Shared with SelectionGizmo — true while an axis drag is in progress.
   const isDraggingGizmoRef = useRef(false);
@@ -61,6 +64,8 @@ export default function Scene({
   onSelectBlockRef.current = onSelectBlock;
   const onDeselectRef = useRef(onDeselect);
   onDeselectRef.current = onDeselect;
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
 
 
   const roadCurve = useMemo(() => {
@@ -101,8 +106,10 @@ export default function Scene({
         camera.position.addScaledVector(rightVec.current, -dx * speed);
         camera.position.addScaledVector(screenUpVec.current, dy * speed);
         setGhost(null);
-      } else if (!isDraggingGizmoRef.current && !e.altKey) {
+      } else if (!isDraggingGizmoRef.current && !e.altKey && !selectedIdRef.current && placingRef.current) {
         setGhost(toGrid(e));
+      } else {
+        setGhost(null);
       }
     };
 
@@ -115,8 +122,10 @@ export default function Scene({
       );
       if (existing) {
         onSelectBlockRef.current(existing.id);
-      } else {
+      } else if (selectedIdRef.current) {
+        // Something was selected — clicking empty ground just deselects.
         onDeselectRef.current();
+      } else {
         onPlaceRef.current(p);
       }
     };
@@ -132,6 +141,9 @@ export default function Scene({
         canvas.style.cursor = 'grab';
         setGhost(null);
       }
+      if ((e.key === 'r' || e.key === 'R') && placingRef.current && !selectedIdRef.current) {
+        onRotateRef.current();
+      }
     };
 
     const onKeyUp = (e: KeyboardEvent) => {
@@ -142,7 +154,12 @@ export default function Scene({
 
     const onContext = (e: MouseEvent) => {
       e.preventDefault();
-      onRotateRef.current();
+      if (placingRef.current) {
+        setGhost(null);
+        setPlacing(false);
+      } else {
+        setPlacing(true);
+      }
     };
 
     const onWheel = (e: WheelEvent) => {
