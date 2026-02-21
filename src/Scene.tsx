@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
-import type { Block, RoadType } from './App';
+import type { Block, RoadType, GizmoMode } from './App';
 import { TILE_SIZE } from './constants';
 import Car from './Car';
 import CurveLine from './visuals/CurveLine';
@@ -15,11 +15,13 @@ interface Props {
   selectedRoadType: RoadType;
   ghostRotation: number;
   selectedId: string | null;
+  gizmoMode: GizmoMode;
   onPlace: (pos: [number, number, number]) => void;
   onRotate: () => void;
   onSelectBlock: (id: string) => void;
   onDeselect: () => void;
   onMoveBlock: (id: string, newPos: [number, number, number]) => void;
+  onRotateBlock: (id: string, delta: 1 | -1) => void;
 }
 
 const GROUND = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -33,11 +35,13 @@ export default function Scene({
   selectedRoadType,
   ghostRotation,
   selectedId,
+  gizmoMode,
   onPlace,
   onRotate,
   onSelectBlock,
   onDeselect,
   onMoveBlock,
+  onRotateBlock,
 }: Props) {
   const { gl, camera } = useThree();
   const [ghost, setGhost] = useState<[number, number, number] | null>(null);
@@ -219,7 +223,9 @@ export default function Scene({
       {selectedBlock && (
         <SelectionGizmo
           position={selectedBlock.position}
+          mode={gizmoMode}
           onMove={(newPos) => onMoveBlock(selectedId!, newPos)}
+          onRotate={(delta) => onRotateBlock(selectedId!, delta)}
           isDraggingRef={isDraggingGizmoRef}
         />
       )}

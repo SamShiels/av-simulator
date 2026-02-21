@@ -5,6 +5,7 @@ import Sidebar from './Sidebar';
 import type { InspectedObject } from './Inspector';
 
 export type RoadType = 'straight' | 'corner';
+export type GizmoMode = 'translate' | 'rotate';
 
 export interface Block {
   id: string;
@@ -24,6 +25,7 @@ export default function App() {
   const [ghostRotation, setGhostRotation] = useState(1);
   const [blocks, setBlocks] = useState<Block[]>([]);
   const [selectedObject, setSelectedObject] = useState<SelectedObject>(null);
+  const [gizmoMode, setGizmoMode] = useState<GizmoMode>('translate');
 
   function placeBlock(pos: [number, number, number]) {
     const occupied = blocks.some(b => b.position[0] === pos[0] && b.position[2] === pos[2]);
@@ -55,6 +57,12 @@ export default function App() {
     const occupied = blocks.some(b => b.id !== id && b.position[0] === newPos[0] && b.position[2] === newPos[2]);
     if (occupied) return;
     setBlocks(prev => prev.map(b => b.id === id ? { ...b, position: newPos } : b));
+  }
+
+  function handleRotateBlock(id: string, delta: 1 | -1) {
+    setBlocks(prev => prev.map(b =>
+      b.id === id ? { ...b, rotation: ((b.rotation + delta) % 4 + 4) % 4 } : b,
+    ));
   }
 
   function handleDelete() {
@@ -96,13 +104,41 @@ export default function App() {
           selectedRoadType={selectedRoadType}
           ghostRotation={ghostRotation}
           selectedId={selectedObject?.kind === 'tile' ? selectedObject.id : null}
+          gizmoMode={gizmoMode}
           onPlace={placeBlock}
           onRotate={rotate}
           onSelectBlock={handleSelectBlock}
           onDeselect={handleDeselect}
           onMoveBlock={handleMoveBlock}
+          onRotateBlock={handleRotateBlock}
         />
       </Canvas>
+
+      {/* Gizmo mode tab bar */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1 rounded-xl backdrop-blur-xl bg-white/10 shadow-2xl border border-white/15 p-1 z-10">
+        <button
+          title="Move"
+          onClick={() => setGizmoMode('translate')}
+          className={`p-2 rounded-lg transition-all ${gizmoMode === 'translate' ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white hover:bg-white/10'}`}
+        >
+          {/* Four-way move arrows */}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M5 9l-3 3 3 3M9 5l3-3 3 3M15 19l-3 3-3-3M19 9l3 3-3 3M12 3v18M3 12h18" />
+          </svg>
+        </button>
+        <button
+          title="Rotate"
+          onClick={() => setGizmoMode('rotate')}
+          className={`p-2 rounded-lg transition-all ${gizmoMode === 'rotate' ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white hover:bg-white/10'}`}
+        >
+          {/* Circular rotation arrow */}
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21.5 2v6h-6" />
+            <path d="M21.34 15.57a10 10 0 1 1-.57-8.38" />
+          </svg>
+        </button>
+      </div>
+
       <Sidebar
         selectedRoadType={selectedRoadType}
         onSelect={setSelectedRoadType}
