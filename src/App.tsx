@@ -23,10 +23,13 @@ export type SelectedObject =
 export default function App() {
   const [selectedRoadType, setSelectedRoadType] = useState<RoadType | null>(null);
   const [ghostRotation, setGhostRotation] = useState(1);
-  const [blocks, setBlocks] = useState<Block[]>([]);
+  const [blocks, setBlocks] = useState<Block[]>([
+    { id: 'default-0', position: [0, 0, 0], roadType: 'straight', rotation: 1 },
+  ]);
   const [selectedObject, setSelectedObject] = useState<SelectedObject>(null);
   const [gizmoMode, setGizmoMode] = useState<GizmoMode>('translate');
   const [playing, setPlaying] = useState(false);
+  const [rendering, setRendering] = useState(false);
 
   function placeBlock(pos: [number, number, number]) {
     if (!selectedRoadType) return;
@@ -108,6 +111,8 @@ export default function App() {
           selectedId={selectedObject?.kind === 'tile' ? selectedObject.id : null}
           gizmoMode={gizmoMode}
           playing={playing}
+          rendering={rendering}
+          onRenderComplete={() => setRendering(false)}
           onPlace={placeBlock}
           onRotate={rotate}
           onSelectBlock={handleSelectBlock}
@@ -145,7 +150,8 @@ export default function App() {
         <button
           title={playing ? 'Stop' : 'Play'}
           onClick={() => setPlaying(p => !p)}
-          className="p-2 rounded-lg transition-all text-white/40 hover:text-white hover:bg-white/10"
+          disabled={rendering}
+          className="p-2 rounded-lg transition-all text-white/40 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none"
         >
           {playing ? (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
@@ -156,6 +162,18 @@ export default function App() {
               <polygon points="5,3 19,12 5,21" />
             </svg>
           )}
+        </button>
+
+        <button
+          title="Render"
+          onClick={() => setRendering(true)}
+          disabled={rendering || playing}
+          className="p-2 rounded-lg transition-all text-white/40 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:pointer-events-none"
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <path d="M23 7l-7 5 7 5V7z" />
+            <rect x="1" y="5" width="15" height="14" rx="2" />
+          </svg>
         </button>
       </div>
 

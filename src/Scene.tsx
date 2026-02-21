@@ -16,6 +16,8 @@ interface Props {
   selectedId: string | null;
   gizmoMode: GizmoMode;
   playing: boolean;
+  rendering: boolean;
+  onRenderComplete: () => void;
   onPlace: (pos: [number, number, number]) => void;
   onRotate: () => void;
   onSelectBlock: (id: string) => void;
@@ -32,6 +34,8 @@ export default function Scene({
   selectedId,
   gizmoMode,
   playing,
+  rendering,
+  onRenderComplete,
   onPlace,
   onRotate,
   onSelectBlock,
@@ -72,7 +76,7 @@ export default function Scene({
       <directionalLight position={[10, 20, 10]} intensity={1} />
       <gridHelper args={[30, 30, '#444', '#2a2a2a']} />
       <CurveLine curve={roadCurve} />
-      <Car curve={roadCurve} playing={playing} />
+      <Car curve={roadCurve} playing={playing} rendering={rendering} onRenderComplete={onRenderComplete} />
 
       {ghost && selectedRoadType && (
         <RoadTile

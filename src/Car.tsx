@@ -1,5 +1,5 @@
-import { Suspense, useRef, useMemo } from 'react';
-import { useLoader, useFrame } from '@react-three/fiber';
+import { Suspense, useRef, useMemo, useEffect } from 'react';
+import { useLoader, useFrame, useThree } from '@react-three/fiber';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 import * as THREE from 'three';
@@ -20,12 +20,17 @@ const PITCH_SMOOTHING = 2.0;
 const DRIFT_AMPLITUDE = 0.1; // max lateral offset in world units
 const DRIFT_FREQUENCY = 0.28; // cycles per second of the wander sine wave
 
+// Dashcam height above the car's world origin
+const DASHCAM_HEIGHT = 0.5;
+
 // Reused across frames to avoid per-frame allocation
 const _cross = new THREE.Vector3();
 
 interface Props {
   curve: THREE.Curve<THREE.Vector3> | null;
   playing: boolean;
+  rendering: boolean;
+  onRenderComplete: () => void;
 }
 
 /**
@@ -42,7 +47,7 @@ function roadNoiseY(t: number): number {
   );
 }
 
-function Model({ curve, playing }: Props) {
+function Model({ curve, playing, rendering, onRenderComplete }: Props) {
   const materials = useLoader(MTLLoader, MTL);
   const obj = useLoader(OBJLoader, OBJ, loader => {
     materials.preload();
@@ -60,16 +65,62 @@ function Model({ curve, playing }: Props) {
   const rollRef  = useRef(0);
   const pitchRef = useRef(0);
 
+  // ── Dashcam camera ─────────────────────────────────────────────────────────
+  const { set, get, size } = useThree();
+
+  const dashCam = useMemo(() => {
+    const cam = new THREE.PerspectiveCamera(85, size.width / size.height, 0.1, 1000);
+    // 'YXZ' order: yaw first, then pitch, then roll — standard for a vehicle camera
+    cam.rotation.order = 'YXZ';
+    return cam;
+  }, []);
+
+  // Keep aspect ratio in sync with canvas size
+  useEffect(() => {
+    dashCam.aspect = size.width / size.height;
+    dashCam.updateProjectionMatrix();
+  }, [size.width, size.height]);
+
+  const prevCameraRef = useRef<THREE.Camera | null>(null);
+
+  useEffect(() => {
+    if (rendering) {
+      tRef.current  = 0;
+      timeRef.current = 0;
+      prevCameraRef.current = get().camera;
+      set({ camera: dashCam });
+    } else {
+      if (prevCameraRef.current) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        set({ camera: prevCameraRef.current as any });
+        prevCameraRef.current = null;
+      }
+    }
+  }, [rendering]);
+
   useFrame((_, delta) => {
     if (!curve || !groupRef.current || !bodyRef.current) return;
 
-    if (!playing) {
+    const isActive = playing || rendering;
+    if (!isActive) {
       tRef.current = 0;
       return;
     }
-    // Advance t proportional to world-space speed
-    const len = curve.getLength();
-    tRef.current = (tRef.current + (SPEED / len) * delta) % 1;
+
+    // Advance t — rendering stops at the end of the road instead of looping
+    const len  = curve.getLength();
+    const step = (SPEED / len) * delta;
+
+    if (rendering) {
+      if (tRef.current + step >= 1) {
+        onRenderComplete();
+        return;
+      }
+      tRef.current += step;
+    } else {
+      tRef.current = (tRef.current + step) % 1;
+    }
+
     timeRef.current += delta;
 
     const t    = tRef.current;
@@ -102,7 +153,6 @@ function Model({ curve, playing }: Props) {
     const signedCurvature = _cross.y / eps;
 
     // The body leans opposite to centripetal acceleration (suspension inertia).
-    // Negative Z rotation = top of car tilts away from the turn direction.
     const targetRoll = signedCurvature * ROLL_STRENGTH;
     rollRef.current = THREE.MathUtils.lerp(rollRef.current, targetRoll, delta * ROLL_SMOOTHING);
 
@@ -117,6 +167,15 @@ function Model({ curve, playing }: Props) {
     bodyRef.current.rotation.x = pitchRef.current;
     bodyRef.current.rotation.z = rollRef.current;
     bodyRef.current.position.y = noiseY;
+
+    // ── Dashcam: position and orient in world space ─────────────────────────
+    if (rendering) {
+      dashCam.position.set(pos.x, pos.y + DASHCAM_HEIGHT + noiseY, pos.z);
+      // +π flips the default -Z look direction to +Z (car forward)
+      dashCam.rotation.y = Math.atan2(tangent.x, tangent.z) + Math.PI;
+      dashCam.rotation.x = pitchRef.current;
+      dashCam.rotation.z = rollRef.current;
+    }
   });
 
   return (
@@ -128,10 +187,10 @@ function Model({ curve, playing }: Props) {
   );
 }
 
-export default function Car({ curve, playing }: Props) {
+export default function Car({ curve, playing, rendering, onRenderComplete }: Props) {
   return (
     <Suspense fallback={null}>
-      <Model curve={curve} playing={playing} />
+      <Model curve={curve} playing={playing} rendering={rendering} onRenderComplete={onRenderComplete} />
     </Suspense>
   );
 }
