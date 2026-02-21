@@ -149,8 +149,7 @@ export default function App() {
         >
           {playing ? (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
-              <rect x="5" y="4" width="4" height="16" rx="1" />
-              <rect x="15" y="4" width="4" height="16" rx="1" />
+              <rect x="5" y="5" width="14" height="14" rx="1" />
             </svg>
           ) : (
             <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="none">
