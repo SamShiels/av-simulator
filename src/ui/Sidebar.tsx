@@ -1,8 +1,8 @@
 import { Canvas } from '@react-three/fiber';
 import { Suspense, useState } from 'react';
 import { cn } from '@/lib/utils';
-import type { RoadType } from './App';
-import { RoadTileModel } from './visuals/RoadTile';
+import type { RoadType } from '../App';
+import { RoadTileModel } from '../visuals/RoadTile';
 import Inspector, { type InspectedObject } from './Inspector';
 
 interface Props {

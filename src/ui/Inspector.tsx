@@ -1,4 +1,4 @@
-import type { RoadType } from './App';
+import type { RoadType } from '../App';
 
 // ── Inspected object types ──────────────────────────────────────────────────
 // Each variant carries all the data the inspector needs to display.
