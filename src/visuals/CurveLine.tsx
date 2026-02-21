@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import * as THREE from 'three'
 
-export default function CurveLine({ curve }: { curve: THREE.CatmullRomCurve3 | null }) {
+export default function CurveLine({ curve }: { curve: THREE.Curve<THREE.Vector3> | null }) {
   const line = useMemo(() => {
     if (!curve) return null
     const geom = new THREE.BufferGeometry().setFromPoints(curve.getPoints(300))

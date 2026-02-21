@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
-import { useThree } from '@react-three/fiber'
+import { useThree, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 import type { Block, RoadType } from './App'
 import { TILE_SIZE } from './constants'
@@ -32,6 +32,33 @@ export default function Scene({
 }: Props) {
   const { gl, camera } = useThree()
   const [ghost, setGhost] = useState<[number, number, number] | null>(null)
+  const pointerPosRef = useRef<{ x: number; y: number } | null>(null)
+
+  // Edge pan: move camera each frame when cursor is within EDGE_PX of the viewport border.
+  const EDGE_PX = 100;
+  const right = new THREE.Vector3();
+  const screenUp = new THREE.Vector3();
+  useFrame((_, delta) => {
+    const pos = pointerPosRef.current;
+    if (!pos) return;
+    const rect = gl.domElement.getBoundingClientRect();
+    const xRel = pos.x - rect.left;
+    const yRel = pos.y - rect.top;
+
+    // Pan speed in world units/sec, proportional to viewport size so it
+    // stays visually consistent across zoom levels.
+    const speed = (800 / camera.zoom) * delta;
+
+    // Camera right vector projected onto XZ.
+    right.setFromMatrixColumn(camera.matrixWorld, 0).setY(0).normalize();
+    // Camera screen-up projected onto XZ.
+    screenUp.setFromMatrixColumn(camera.matrixWorld, 1).setY(0).normalize();
+
+    if (xRel < EDGE_PX)             camera.position.addScaledVector(right, -speed);
+    else if (xRel > rect.width - EDGE_PX)  camera.position.addScaledVector(right,  speed);
+    if (yRel < EDGE_PX)             camera.position.addScaledVector(screenUp, speed);
+    else if (yRel > rect.height - EDGE_PX) camera.position.addScaledVector(screenUp, -speed);
+  });
 
   const roadCurve = useMemo(() => {
     const result = findRoadPath(blocks)
@@ -62,26 +89,40 @@ export default function Scene({
       return rc.ray.intersectPlane(GROUND, hit) ? snap(hit) : null
     }
 
-    const onMove = (e: PointerEvent) => setGhost(toGrid(e))
+    const onMove = (e: PointerEvent) => {
+      pointerPosRef.current = { x: e.clientX, y: e.clientY };
+      setGhost(toGrid(e));
+    };
     const onClick = (e: MouseEvent) => {
       const p = toGrid(e)
       if (p) onPlaceRef.current(p)
     }
-    const onLeave = () => setGhost(null)
+    const onLeave = () => {
+      pointerPosRef.current = null;
+      setGhost(null);
+    };
     const onContext = (e: MouseEvent) => {
       e.preventDefault()
       onRotateRef.current()
     }
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.1 : 0.9;
+      camera.zoom = Math.max(15, Math.min(300, camera.zoom * factor));
+      camera.updateProjectionMatrix();
+    };
 
     canvas.addEventListener('pointermove', onMove)
     canvas.addEventListener('click', onClick)
     canvas.addEventListener('pointerleave', onLeave)
     canvas.addEventListener('contextmenu', onContext)
+    canvas.addEventListener('wheel', onWheel, { passive: false })
     return () => {
       canvas.removeEventListener('pointermove', onMove)
       canvas.removeEventListener('click', onClick)
       canvas.removeEventListener('pointerleave', onLeave)
       canvas.removeEventListener('contextmenu', onContext)
+      canvas.removeEventListener('wheel', onWheel)
     }
   }, [gl, camera])
 

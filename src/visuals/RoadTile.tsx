@@ -15,7 +15,7 @@ const MTL_PATH: Record<RoadType, string> = {
   corner:   '/assets/roads/road-bend-sidewalk.mtl',
 }
 
-function RoadTileModel({
+export function RoadTileModel({
   roadType,
   rotation,
   ghost,

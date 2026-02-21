@@ -11,7 +11,7 @@ const OBJ = '/assets/car/sedan-sports.obj'
 const SPEED = 6
 
 interface Props {
-  curve: THREE.CatmullRomCurve3 | null
+  curve: THREE.Curve<THREE.Vector3> | null
 }
 
 function Model({ curve }: Props) {
