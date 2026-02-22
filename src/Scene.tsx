@@ -41,6 +41,7 @@ export interface ScenarioEditorProps {
   onAddWaypoint: (actorId: string, time: number, position: [number, number, number]) => void;
   onMoveWaypoint: (actorId: string, waypointId: string, position: [number, number, number]) => void;
   onSelectWaypoint: (waypointId: string | null) => void;
+  onSelectActor: (actorId: string) => void;
 }
 
 interface Props {
@@ -59,6 +60,7 @@ export default function Scene({ appMode, roadEditor, scenarioEditor }: Props) {
     scenario, scenarioTime, scenarioPose, selectedActorId, selectedWaypointId,
     playing, rendering,
     onRenderComplete, onScenarioTimeChange, onAddWaypoint, onMoveWaypoint, onSelectWaypoint,
+    onSelectActor,
   } = scenarioEditor;
   const { gl, camera } = useThree();
 
@@ -119,10 +121,12 @@ export default function Scene({ appMode, roadEditor, scenarioEditor }: Props) {
 
   const selectedBlock = selectedId ? blocks.find(b => b.id === selectedId) ?? null : null;
 
-  // All tracks for waypoint marker rendering
-  const allTracks = [scenario.egoTrack, ...scenario.tracks];
   const actorColorMap: Record<string, string> = { ego: '#22d3ee' };
   scenario.actors.forEach(a => { actorColorMap[a.id] = a.color; });
+
+  const selectedTrack = selectedActorId === 'ego'
+    ? scenario.egoTrack
+    : scenario.tracks.find(t => t.actorId === selectedActorId) ?? null;
 
   return (
     <>
@@ -165,26 +169,25 @@ export default function Scene({ appMode, roadEditor, scenarioEditor }: Props) {
         />
       )}
 
-      {/* Scenario mode overlays */}
-      {appMode === 'scenario' && allTracks.map(track => {
-        const color = actorColorMap[track.actorId] ?? '#ffffff';
-
+      {/* Selected actor's track + waypoints */}
+      {appMode === 'scenario' && selectedTrack && (() => {
+        const color = actorColorMap[selectedTrack.actorId] ?? '#ffffff';
         return (
-          <group key={track.actorId}>
-            <TrackLine track={track} color={color} />
-            {track.waypoints.map((wp) => (
+          <group key={selectedTrack.actorId}>
+            <TrackLine track={selectedTrack} color={color} />
+            {selectedTrack.waypoints.map((wp) => (
               <WaypointMarker
                 key={wp.id}
                 waypoint={wp}
                 color={color}
                 selected={selectedWaypointId === wp.id}
                 onSelect={() => onSelectWaypoint(wp.id)}
-                onMove={(pos) => onMoveWaypoint(track.actorId, wp.id, pos)}
+                onMove={(pos) => onMoveWaypoint(selectedTrack.actorId, wp.id, pos)}
               />
             ))}
           </group>
         );
-      })}
+      })()}
 
       {/* Actor meshes */}
       {appMode === 'scenario' && scenario.actors.map(actor => {
@@ -192,7 +195,14 @@ export default function Scene({ appMode, roadEditor, scenarioEditor }: Props) {
         if (!track) return null;
         const pose = evaluateTrack(track, scenarioTime);
         if (!pose) return null;
-        return <ActorMesh key={actor.id} actor={actor} pose={pose} />;
+        return (
+          <ActorMesh
+            key={actor.id}
+            actor={actor}
+            pose={pose}
+            onSelect={() => onSelectActor(actor.id)}
+          />
+        );
       })}
     </>
   );

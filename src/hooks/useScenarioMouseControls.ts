@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 
 const GROUND = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -22,17 +22,15 @@ export function useScenarioMouseControls({
   onAddWaypoint,
   onScenarioTimeChange,
 }: Options) {
-  // Keep stable refs so the event listeners don't re-register on every render
-  const refs = {
-    scenarioTime: { current: scenarioTime },
-    selectedActorId: { current: selectedActorId },
-    onAddWaypoint: { current: onAddWaypoint },
-    onScenarioTimeChange: { current: onScenarioTimeChange },
-  };
-  refs.scenarioTime.current = scenarioTime;
-  refs.selectedActorId.current = selectedActorId;
-  refs.onAddWaypoint.current = onAddWaypoint;
-  refs.onScenarioTimeChange.current = onScenarioTimeChange;
+  const scenarioTimeRef = useRef(scenarioTime);
+  const selectedActorIdRef = useRef(selectedActorId);
+  const onAddWaypointRef = useRef(onAddWaypoint);
+  const onScenarioTimeChangeRef = useRef(onScenarioTimeChange);
+
+  scenarioTimeRef.current = scenarioTime;
+  selectedActorIdRef.current = selectedActorId;
+  onAddWaypointRef.current = onAddWaypoint;
+  onScenarioTimeChangeRef.current = onScenarioTimeChange;
 
   useEffect(() => {
     if (!enabled) return;
@@ -85,9 +83,9 @@ export function useScenarioMouseControls({
       if (dx * dx + dy * dy > 25) return; // dragged — not a click
       const p = toWorld(e);
       if (!p) return;
-      refs.onAddWaypoint.current(
-        refs.selectedActorId.current,
-        refs.scenarioTime.current,
+      onAddWaypointRef.current(
+        selectedActorIdRef.current,
+        scenarioTimeRef.current,
         p,
       );
     };

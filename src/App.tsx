@@ -166,12 +166,44 @@ export default function App() {
     }
   }
 
-  function addWaypoint(actorId: string, time: number, position: [number, number, number]) {
+  function isEvenlyDistributed(waypoints: Waypoint[], duration: number): boolean {
+    if (waypoints.length <= 1) return true;
+    const n = waypoints.length;
+    const tolerance = duration * 0.01;
+    return waypoints.every((wp, i) =>
+      Math.abs(wp.time - (i / (n - 1)) * duration) <= tolerance,
+    );
+  }
+
+  function addWaypoint(actorId: string, _time: number, position: [number, number, number]) {
     const id = uid();
-    setTrack(actorId, track => ({
-      ...track,
-      waypoints: sortByTime([...track.waypoints, { id, time, position }]),
-    }));
+    const dur = scenario.duration;
+    setTrack(actorId, track => {
+      const wps = track.waypoints;
+      if (isEvenlyDistributed(wps, dur)) {
+        // Fresh/uniform path: append and redistribute all evenly
+        const newWps = [...wps, { id, time: dur, position }];
+        const n = newWps.length;
+        return {
+          ...track,
+          waypoints: newWps.map((wp, i) => ({
+            ...wp,
+            time: n === 1 ? 0 : (i / (n - 1)) * dur,
+          })),
+        };
+      } else {
+        // User has manual timing: preserve existing, append after last with avg gap
+        const lastTime = wps[wps.length - 1].time;
+        const avgGap = wps.length > 1
+          ? (wps[wps.length - 1].time - wps[0].time) / (wps.length - 1)
+          : dur * 0.25;
+        const newTime = Math.min(dur, lastTime + avgGap);
+        return {
+          ...track,
+          waypoints: sortByTime([...wps, { id, time: newTime, position }]),
+        };
+      }
+    });
     setSelectedWaypointId(id);
   }
 
@@ -232,6 +264,11 @@ export default function App() {
     setSelectedActorId(id);
   }
 
+  function handleSelectActor(actorId: string) {
+    setSelectedActorId(actorId);
+    setSelectedWaypointId(null);
+  }
+
   function removeActor(actorId: string) {
     setScenario(s => ({
       ...s,
@@ -242,7 +279,20 @@ export default function App() {
   }
 
   function setDuration(duration: number) {
-    setScenario(s => ({ ...s, duration: Math.max(1, duration) }));
+    const newDur = Math.max(1, duration);
+    setScenario(s => {
+      const scale = newDur / s.duration;
+      const rescaleTrack = (track: WaypointTrack) => ({
+        ...track,
+        waypoints: track.waypoints.map(wp => ({ ...wp, time: wp.time * scale })),
+      });
+      return {
+        ...s,
+        duration: newDur,
+        egoTrack: rescaleTrack(s.egoTrack),
+        tracks: s.tracks.map(rescaleTrack),
+      };
+    });
   }
 
   // ── Derived: ego car pose (always — car follows waypoints in both modes) ────
@@ -320,6 +370,7 @@ export default function App() {
             onAddWaypoint: addWaypoint,
             onMoveWaypoint: moveWaypoint,
             onSelectWaypoint: setSelectedWaypointId,
+            onSelectActor: handleSelectActor,
           }}
         />
       </Canvas>
@@ -344,7 +395,7 @@ export default function App() {
         scenario={scenario}
         selectedActorId={selectedActorId}
         selectedWaypointId={selectedWaypointId}
-        onSelectActor={setSelectedActorId}
+        onSelectActor={handleSelectActor}
         onAddActor={addActor}
         onRemoveActor={removeActor}
       />
@@ -358,7 +409,7 @@ export default function App() {
           selectedWaypointId={selectedWaypointId}
           onScrub={setScenarioTime}
           onSetDuration={setDuration}
-          onSelectActor={setSelectedActorId}
+          onSelectActor={handleSelectActor}
           onSelectWaypoint={(actorId: string, waypointId: string) => {
             setSelectedActorId(actorId);
             setSelectedWaypointId(waypointId);

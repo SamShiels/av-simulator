@@ -3,6 +3,7 @@ import type { Actor, ScenarioPose } from '../scenario/types';
 interface Props {
   actor: Actor;
   pose: ScenarioPose;
+  onSelect?: () => void;
 }
 
 function PedestrianMesh({ color }: { color: string }) {
@@ -56,11 +57,15 @@ function VehicleMesh({ color }: { color: string }) {
   );
 }
 
-export default function ActorMesh({ actor, pose }: Props) {
+export default function ActorMesh({ actor, pose, onSelect }: Props) {
   const [px, py, pz] = pose.position;
 
   return (
-    <group position={[px, py, pz]} rotation={[0, pose.yaw, 0]}>
+    <group
+      position={[px, py, pz]}
+      rotation={[0, pose.yaw, 0]}
+      onClick={onSelect ? (e) => { e.stopPropagation(); onSelect(); } : undefined}
+    >
       {actor.kind === 'pedestrian' && <PedestrianMesh color={actor.color} />}
       {actor.kind === 'stroller' && <StrollerMesh color={actor.color} />}
       {actor.kind === 'vehicle' && <VehicleMesh color={actor.color} />}
