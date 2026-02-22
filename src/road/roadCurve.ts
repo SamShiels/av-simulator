@@ -15,7 +15,7 @@ const DIR_XZ: Record<Dir, [number, number]> = {
 };
 
 // Returns the lane-centerline control points for a path:
-// entry of first step, then exit of every step.
+// entry of first step, [arc midpoint for corner steps,] then exit of every step.
 // Used to populate ego track waypoints when tiles are placed.
 export function getRoadWaypoints(steps: PathStep[]): THREE.Vector3[] {
   if (steps.length === 0) return [];
@@ -28,10 +28,29 @@ export function getRoadWaypoints(steps: PathStep[]): THREE.Vector3[] {
     const lEx = -fdz, lEz = fdx;
     const lXx =  tdz, lXz = -tdx;
 
+    const entryX = cx + fdx * HALF_TILE + lEx * LANE_OFFSET;
+    const entryZ = cz + fdz * HALF_TILE + lEz * LANE_OFFSET;
+    const exitX  = cx + tdx * HALF_TILE + lXx * LANE_OFFSET;
+    const exitZ  = cz + tdz * HALF_TILE + lXz * LANE_OFFSET;
+
     if (i === 0) {
-      points.push(new THREE.Vector3(cx + fdx * HALF_TILE + lEx * LANE_OFFSET, 0, cz + fdz * HALF_TILE + lEz * LANE_OFFSET));
+      points.push(new THREE.Vector3(entryX, 0, entryZ));
     }
-    points.push(new THREE.Vector3(cx + tdx * HALF_TILE + lXx * LANE_OFFSET, 0, cz + tdz * HALF_TILE + lXz * LANE_OFFSET));
+
+    // For corner tiles add a bezier arc midpoint so CatmullRom curves naturally.
+    // Control point = intersection of the two lane tangents; midpoint = bezier at t=0.5.
+    const isCorner = fdx * tdx + fdz * tdz === 0;
+    if (isCorner) {
+      const ctrlX = fdx === 0 ? entryX : exitX;
+      const ctrlZ = fdz === 0 ? entryZ : exitZ;
+      points.push(new THREE.Vector3(
+        0.25 * entryX + 0.5 * ctrlX + 0.25 * exitX,
+        0,
+        0.25 * entryZ + 0.5 * ctrlZ + 0.25 * exitZ,
+      ));
+    }
+
+    points.push(new THREE.Vector3(exitX, 0, exitZ));
   });
 
   return points;

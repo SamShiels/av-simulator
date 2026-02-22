@@ -55,8 +55,10 @@ export default function App() {
   const [selectedWaypointId, setSelectedWaypointId] = useState<string | null>(null);
   const [selectedActorId, setSelectedActorId] = useState<string>('ego');
 
-  // ── Sync ego track from road geometry ─────────────────────────────────────
-  function syncEgoTrackFromBlocks(currentBlocks: Block[]) {
+  // ── Initial ego track seed (mount only) ───────────────────────────────────
+  // Builds the full track from the default road. After this, placements only
+  // append; moves/rotates/deletes leave the track untouched so manual edits survive.
+  function seedEgoTrack(currentBlocks: Block[]) {
     const path = findRoadPath(currentBlocks);
     if (!path) {
       setScenario(s => ({ ...s, egoTrack: { actorId: 'ego', waypoints: [] } }));
@@ -86,7 +88,36 @@ export default function App() {
     };
     const newBlocks = [...blocks, newBlock];
     setBlocks(newBlocks);
-    syncEgoTrackFromBlocks(newBlocks);
+
+    // Only append waypoints if the new tile actually extends the road path.
+    const oldPath = findRoadPath(blocks);
+    const oldPathLen = oldPath?.length ?? 0;
+    const newPath = findRoadPath(newBlocks);
+    if (!newPath || newPath.length <= oldPathLen) return;
+
+    // Diff the old and new point arrays — corner tiles contribute 2 new points.
+    const oldPts = oldPath ? getRoadWaypoints(oldPath) : [];
+    const newPts = getRoadWaypoints(newPath);
+    const addedPts = newPts.slice(oldPts.length);
+    if (addedPts.length === 0) return;
+
+    const addedWps: Waypoint[] = addedPts.map(pt => ({
+      id: uid(),
+      time: 0,
+      position: [pt.x, pt.y, pt.z] as [number, number, number],
+    }));
+    setScenario(s => {
+      // Append new waypoints then redistribute all times evenly 0→duration.
+      // This preserves waypoint positions while keeping timing predictable.
+      const wps = [...s.egoTrack.waypoints, ...addedWps];
+      const n = wps.length;
+      const dur = s.duration;
+      const redistributed = wps.map((wp, i) => ({
+        ...wp,
+        time: n === 1 ? 0 : (i / (n - 1)) * dur,
+      }));
+      return { ...s, egoTrack: { ...s.egoTrack, waypoints: redistributed } };
+    });
   }
 
   function rotate() {
@@ -104,17 +135,13 @@ export default function App() {
   function handleMoveBlock(id: string, newPos: [number, number, number]) {
     const occupied = blocks.some(b => b.id !== id && b.position[0] === newPos[0] && b.position[2] === newPos[2]);
     if (occupied) return;
-    const newBlocks = blocks.map(b => b.id === id ? { ...b, position: newPos } : b);
-    setBlocks(newBlocks);
-    syncEgoTrackFromBlocks(newBlocks);
+    setBlocks(prev => prev.map(b => b.id === id ? { ...b, position: newPos } : b));
   }
 
   function handleRotateBlock(id: string, delta: 1 | -1) {
-    const newBlocks = blocks.map(b =>
+    setBlocks(prev => prev.map(b =>
       b.id === id ? { ...b, rotation: ((b.rotation + delta) % 4 + 4) % 4 } : b,
-    );
-    setBlocks(newBlocks);
-    syncEgoTrackFromBlocks(newBlocks);
+    ));
   }
 
   function handleDelete() {
@@ -122,9 +149,7 @@ export default function App() {
     if (selectedObject.kind === 'tile') {
       const block = blocks.find(b => b.id === selectedObject.id);
       if (block && block.position[0] === 0 && block.position[2] === 0) return;
-      const newBlocks = blocks.filter(b => b.id !== selectedObject.id);
-      setBlocks(newBlocks);
-      syncEgoTrackFromBlocks(newBlocks);
+      setBlocks(prev => prev.filter(b => b.id !== selectedObject.id));
     }
     setSelectedObject(null);
   }
@@ -242,9 +267,9 @@ export default function App() {
     return null;
   }, [selectedObject, blocks]);
 
-  // ── Sync ego track from initial road ──────────────────────────────────────
+  // ── Seed ego track from initial road on mount ─────────────────────────────
   useEffect(() => {
-    syncEgoTrackFromBlocks(blocks);
+    seedEgoTrack(blocks);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

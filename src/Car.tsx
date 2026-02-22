@@ -14,7 +14,7 @@ const PITCH_STRENGTH  = 0.3;
 const PITCH_SMOOTHING = 2.0;
 
 // Dashcam height above the car's world origin
-const DASHCAM_HEIGHT = 0.5;
+const DASHCAM_HEIGHT = 0.3;
 
 // Multi-sine road-noise for the vertical (Y) axis
 function roadNoiseY(t: number): number {
@@ -102,7 +102,7 @@ function Model({ scenarioPose, rendering }: Props) {
     pitchRef.current = THREE.MathUtils.lerp(pitchRef.current, targetPitch, delta * PITCH_SMOOTHING);
     rollRef.current  = THREE.MathUtils.lerp(rollRef.current, 0, delta * ROLL_SMOOTHING);
 
-    const noiseY = roadNoiseY(time);
+    const noiseY = roadNoiseY(time) * 0.7;
     bodyRef.current.rotation.x = pitchRef.current;
     bodyRef.current.rotation.z = rollRef.current;
     bodyRef.current.position.y = noiseY;

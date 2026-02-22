@@ -41,6 +41,7 @@ export function useScenarioMouseControls({
     const rc = new THREE.Raycaster();
     const hit = new THREE.Vector3();
     const prevPtr = { x: 0, y: 0 };
+    const downPtr = { x: 0, y: 0 };
     const rightVec = new THREE.Vector3();
     const screenUpVec = new THREE.Vector3();
 
@@ -72,8 +73,16 @@ export function useScenarioMouseControls({
       }
     };
 
+    const onPointerDown = (e: PointerEvent) => {
+      downPtr.x = e.clientX;
+      downPtr.y = e.clientY;
+    };
+
     const onClick = (e: MouseEvent) => {
       if (e.altKey) return;
+      const dx = e.clientX - downPtr.x;
+      const dy = e.clientY - downPtr.y;
+      if (dx * dx + dy * dy > 25) return; // dragged — not a click
       const p = toWorld(e);
       if (!p) return;
       refs.onAddWaypoint.current(
@@ -104,6 +113,7 @@ export function useScenarioMouseControls({
       if (e.key === 'Alt') canvas.style.cursor = '';
     };
 
+    canvas.addEventListener('pointerdown', onPointerDown);
     canvas.addEventListener('pointermove', onMove);
     canvas.addEventListener('click', onClick);
     canvas.addEventListener('contextmenu', onContext);
@@ -112,6 +122,7 @@ export function useScenarioMouseControls({
     window.addEventListener('keyup', onKeyUp);
 
     return () => {
+      canvas.removeEventListener('pointerdown', onPointerDown);
       canvas.removeEventListener('pointermove', onMove);
       canvas.removeEventListener('click', onClick);
       canvas.removeEventListener('contextmenu', onContext);
