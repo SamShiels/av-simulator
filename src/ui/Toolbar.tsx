@@ -1,48 +1,24 @@
 import type { GizmoMode } from '../App';
 
-export type AppMode = 'road' | 'scenario';
-
 interface Props {
-  appMode: AppMode;
   gizmoMode: GizmoMode;
   playing: boolean;
   rendering: boolean;
-  onAppModeChange: (mode: AppMode) => void;
   onGizmoModeChange: (mode: GizmoMode) => void;
   onPlayToggle: () => void;
   onRenderStart: () => void;
 }
 
 export default function Toolbar({
-  appMode,
   gizmoMode,
   playing,
   rendering,
-  onAppModeChange,
   onGizmoModeChange,
   onPlayToggle,
   onRenderStart,
 }: Props) {
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 flex gap-1 rounded-xl backdrop-blur-xl bg-white/10 shadow-2xl border border-white/15 p-1 z-10">
-      {/* Mode tabs */}
-      <button
-        title="Road Editor"
-        onClick={() => onAppModeChange('road')}
-        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${appMode === 'road' ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white hover:bg-white/10'}`}
-      >
-        Road
-      </button>
-      <button
-        title="Scenario Editor"
-        onClick={() => onAppModeChange('scenario')}
-        className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${appMode === 'scenario' ? 'bg-white/20 text-white' : 'text-white/40 hover:text-white hover:bg-white/10'}`}
-      >
-        Scenario
-      </button>
-
-      <div className="w-px bg-white/20 mx-0.5" />
-
       <button
         title="Move"
         onClick={() => onGizmoModeChange('translate')}

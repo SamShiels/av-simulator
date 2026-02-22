@@ -1,7 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import * as THREE from 'three';
-
-const GROUND = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+import { useViewportControls } from './useViewportControls';
 
 interface Options {
   gl: THREE.WebGLRenderer;
@@ -14,119 +13,23 @@ interface Options {
 }
 
 export function useScenarioMouseControls({
-  gl,
-  camera,
-  enabled,
-  scenarioTime,
-  selectedActorId,
-  onAddWaypoint,
-  onScenarioTimeChange,
+  gl, camera, enabled, scenarioTime, selectedActorId, 
+  onAddWaypoint
 }: Options) {
-  const scenarioTimeRef = useRef(scenarioTime);
-  const selectedActorIdRef = useRef(selectedActorId);
-  const onAddWaypointRef = useRef(onAddWaypoint);
-  const onScenarioTimeChangeRef = useRef(onScenarioTimeChange);
+  const state = useRef({ scenarioTime, selectedActorId });
+  state.current = { scenarioTime, selectedActorId };
 
-  scenarioTimeRef.current = scenarioTime;
-  selectedActorIdRef.current = selectedActorId;
-  onAddWaypointRef.current = onAddWaypoint;
-  onScenarioTimeChangeRef.current = onScenarioTimeChange;
-
-  useEffect(() => {
-    if (!enabled) return;
-
-    const canvas = gl.domElement;
-    const rc = new THREE.Raycaster();
-    const hit = new THREE.Vector3();
-    const prevPtr = { x: 0, y: 0 };
-    const downPtr = { x: 0, y: 0 };
-    const rightVec = new THREE.Vector3();
-    const screenUpVec = new THREE.Vector3();
-
-    function toWorld(e: MouseEvent | PointerEvent): [number, number, number] | null {
-      const rect = canvas.getBoundingClientRect();
-      const ndc = new THREE.Vector2(
-        ((e.clientX - rect.left) / rect.width) * 2 - 1,
-        -((e.clientY - rect.top) / rect.height) * 2 + 1,
+  useViewportControls({
+    gl,
+    camera,
+    enabled,
+    onGroundClick: (pos) => {
+      onAddWaypoint(
+        state.current.selectedActorId,
+        state.current.scenarioTime,
+        [pos.x, 0, pos.z] // Cast back to tuple for your data model
       );
-      rc.setFromCamera(ndc, camera);
-      return rc.ray.intersectPlane(GROUND, hit)
-        ? [hit.x, 0, hit.z]
-        : null;
-    }
-
-    const onMove = (e: PointerEvent) => {
-      const prev = { ...prevPtr };
-      prevPtr.x = e.clientX;
-      prevPtr.y = e.clientY;
-
-      if (e.altKey && (e.buttons & 1)) {
-        const dx = e.clientX - prev.x;
-        const dy = e.clientY - prev.y;
-        const speed = 1 / camera.zoom;
-        rightVec.setFromMatrixColumn(camera.matrixWorld, 0).setY(0).normalize();
-        screenUpVec.setFromMatrixColumn(camera.matrixWorld, 1).setY(0).normalize();
-        camera.position.addScaledVector(rightVec, -dx * speed);
-        camera.position.addScaledVector(screenUpVec, dy * speed);
-      }
-    };
-
-    const onPointerDown = (e: PointerEvent) => {
-      downPtr.x = e.clientX;
-      downPtr.y = e.clientY;
-    };
-
-    const onClick = (e: MouseEvent) => {
-      if (e.altKey) return;
-      const dx = e.clientX - downPtr.x;
-      const dy = e.clientY - downPtr.y;
-      if (dx * dx + dy * dy > 25) return; // dragged — not a click
-      const p = toWorld(e);
-      if (!p) return;
-      onAddWaypointRef.current(
-        selectedActorIdRef.current,
-        scenarioTimeRef.current,
-        p,
-      );
-    };
-
-    const onContext = (e: MouseEvent) => {
-      e.preventDefault();
-    };
-
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault();
-      const factor = e.deltaY < 0 ? 1.1 : 0.9;
-      camera.zoom = Math.max(15, Math.min(300, camera.zoom * factor));
-      camera.updateProjectionMatrix();
-    };
-
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Alt') {
-        e.preventDefault();
-        canvas.style.cursor = 'grab';
-      }
-    };
-    const onKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Alt') canvas.style.cursor = '';
-    };
-
-    canvas.addEventListener('pointerdown', onPointerDown);
-    canvas.addEventListener('pointermove', onMove);
-    canvas.addEventListener('click', onClick);
-    canvas.addEventListener('contextmenu', onContext);
-    canvas.addEventListener('wheel', onWheel, { passive: false });
-    window.addEventListener('keydown', onKeyDown);
-    window.addEventListener('keyup', onKeyUp);
-
-    return () => {
-      canvas.removeEventListener('pointerdown', onPointerDown);
-      canvas.removeEventListener('pointermove', onMove);
-      canvas.removeEventListener('click', onClick);
-      canvas.removeEventListener('contextmenu', onContext);
-      canvas.removeEventListener('wheel', onWheel);
-      window.removeEventListener('keydown', onKeyDown);
-      window.removeEventListener('keyup', onKeyUp);
-    };
-  }, [enabled, gl, camera]);
+    },
+    onContextMenu: (e) => e.preventDefault()
+  });
 }

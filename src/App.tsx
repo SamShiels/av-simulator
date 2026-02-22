@@ -2,7 +2,6 @@ import { useState, useMemo, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import Scene from './Scene';
 import Toolbar from './ui/Toolbar';
-import type { AppMode } from './ui/Toolbar';
 import Sidebar from './ui/Sidebar';
 import Timeline from './ui/Timeline';
 import type { InspectedObject } from './ui/Inspector';
@@ -45,9 +44,6 @@ export default function App() {
   const [gizmoMode, setGizmoMode] = useState<GizmoMode>('translate');
   const [playing, setPlaying] = useState(false);
   const [rendering, setRendering] = useState(false);
-
-  // ── App mode ───────────────────────────────────────────────────────────────
-  const [appMode, setAppMode] = useState<AppMode>('road');
 
   // ── Scenario state ─────────────────────────────────────────────────────────
   const [scenario, setScenario] = useState<Scenario>(defaultScenario);
@@ -229,9 +225,8 @@ export default function App() {
     if (selectedWaypointId === waypointId) setSelectedWaypointId(null);
   }
 
-  // Delete selected waypoint on Backspace/Delete key in scenario mode
+  // Delete selected waypoint on Backspace/Delete key
   useEffect(() => {
-    if (appMode !== 'scenario') return;
     function onKeyDown(e: KeyboardEvent) {
       if ((e.key === 'Delete' || e.key === 'Backspace') && selectedWaypointId) {
         deleteWaypoint(selectedActorId, selectedWaypointId);
@@ -239,7 +234,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [appMode, selectedActorId, selectedWaypointId]);
+  }, [selectedActorId, selectedWaypointId]);
 
   function addActor(kind: ActorKind) {
     const id = uid();
@@ -323,12 +318,6 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Mode change: stop playback on switch ───────────────────────────────────
-  function handleAppModeChange(mode: AppMode) {
-    setPlaying(false);
-    setAppMode(mode);
-  }
-
   function handleRenderStart() {
     setScenarioTime(0);
     setRendering(true);
@@ -342,7 +331,6 @@ export default function App() {
         style={{ width: '100%', height: '100%' }}
       >
         <Scene
-          appMode={appMode}
           roadEditor={{
             blocks,
             selectedRoadType,
@@ -376,18 +364,15 @@ export default function App() {
       </Canvas>
 
       <Toolbar
-        appMode={appMode}
         gizmoMode={gizmoMode}
         playing={playing}
         rendering={rendering}
-        onAppModeChange={handleAppModeChange}
         onGizmoModeChange={setGizmoMode}
         onPlayToggle={() => setPlaying(p => !p)}
         onRenderStart={handleRenderStart}
       />
 
       <Sidebar
-        appMode={appMode}
         selectedRoadType={selectedRoadType}
         onSelect={setSelectedRoadType}
         inspectedObject={inspectedObject}
@@ -400,23 +385,21 @@ export default function App() {
         onRemoveActor={removeActor}
       />
 
-      {appMode === 'scenario' && (
-        <Timeline
-          scenario={scenario}
-          scenarioTime={scenarioTime}
-          playing={playing}
-          selectedActorId={selectedActorId}
-          selectedWaypointId={selectedWaypointId}
-          onScrub={setScenarioTime}
-          onSetDuration={setDuration}
-          onSelectActor={handleSelectActor}
-          onSelectWaypoint={(actorId: string, waypointId: string) => {
-            setSelectedActorId(actorId);
-            setSelectedWaypointId(waypointId);
-          }}
-          onWaypointTimeChange={setWaypointTime}
-        />
-      )}
+      <Timeline
+        scenario={scenario}
+        scenarioTime={scenarioTime}
+        playing={playing}
+        selectedActorId={selectedActorId}
+        selectedWaypointId={selectedWaypointId}
+        onScrub={setScenarioTime}
+        onSetDuration={setDuration}
+        onSelectActor={handleSelectActor}
+        onSelectWaypoint={(actorId: string, waypointId: string) => {
+          setSelectedActorId(actorId);
+          setSelectedWaypointId(waypointId);
+        }}
+        onWaypointTimeChange={setWaypointTime}
+      />
     </div>
   );
 }

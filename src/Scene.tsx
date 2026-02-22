@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import type { Block, RoadType, GizmoMode } from './App';
-import type { AppMode } from './ui/Toolbar';
 import type { Scenario, ScenarioPose } from './scenario/types';
 import Car from './Car';
 import RoadTile from './visuals/RoadTile';
@@ -45,12 +44,11 @@ export interface ScenarioEditorProps {
 }
 
 interface Props {
-  appMode: AppMode;
   roadEditor: RoadEditorProps;
   scenarioEditor: ScenarioEditorProps;
 }
 
-export default function Scene({ appMode, roadEditor, scenarioEditor }: Props) {
+export default function Scene({ roadEditor, scenarioEditor }: Props) {
   const {
     blocks, selectedRoadType, ghostRotation, selectedId, gizmoMode,
     onPlace, onRotate, onSelectBlock, onDeselect, onCancelPlacement,
@@ -69,7 +67,7 @@ export default function Scene({ appMode, roadEditor, scenarioEditor }: Props) {
     camera,
     blocks,
     selectedId,
-    selectedRoadType: appMode === 'road' ? selectedRoadType : null,
+    selectedRoadType,
     onPlace,
     onRotate,
     onSelectBlock,
@@ -80,7 +78,7 @@ export default function Scene({ appMode, roadEditor, scenarioEditor }: Props) {
   useScenarioMouseControls({
     gl,
     camera,
-    enabled: appMode === 'scenario',
+    enabled: !selectedRoadType,
     scenarioTime,
     selectedActorId,
     onAddWaypoint,
@@ -132,22 +130,56 @@ export default function Scene({ appMode, roadEditor, scenarioEditor }: Props) {
     <>
       <ambientLight intensity={0.6} />
       <directionalLight position={[10, 20, 10]} intensity={1} />
-      <gridHelper args={[30, 30, '#444', '#2a2a2a']} />
 
       <Car
         scenarioPose={scenarioPose}
         rendering={rendering}
       />
 
-      {/* Road tiles */}
-      {ghost && selectedRoadType && appMode === 'road' && (
-        <RoadTile
-          position={[ghost[0], 0, ghost[2]]}
-          roadType={selectedRoadType}
-          rotation={ghostRotation}
-          ghost
-        />
-      )}
+      {!rendering && 
+        <>
+          <gridHelper args={[30, 30, '#444', '#2a2a2a']} />
+          {/* Road tiles */}
+          {ghost && selectedRoadType && (
+            <RoadTile
+              position={[ghost[0], 0, ghost[2]]}
+              roadType={selectedRoadType}
+              rotation={ghostRotation}
+              ghost
+            />
+          )}
+
+          {selectedBlock && (
+            <SelectionGizmo
+              position={selectedBlock.position}
+              mode={gizmoMode}
+              onMove={(newPos) => onMoveBlock(selectedId!, newPos)}
+              onRotate={(delta) => onRotateBlock(selectedId!, delta)}
+              isDraggingRef={isDraggingGizmoRef}
+            />
+          )}
+
+          {/* Selected actor's track + waypoints */}
+          {!selectedRoadType && selectedTrack && (() => {
+            const color = actorColorMap[selectedTrack.actorId] ?? '#ffffff';
+            return (
+              <group key={selectedTrack.actorId}>
+                <TrackLine track={selectedTrack} color={color} />
+                {selectedTrack.waypoints.map((wp) => (
+                  <WaypointMarker
+                    key={wp.id}
+                    waypoint={wp}
+                    color={color}
+                    selected={selectedWaypointId === wp.id}
+                    onSelect={() => onSelectWaypoint(wp.id)}
+                    onMove={(pos) => onMoveWaypoint(selectedTrack.actorId, wp.id, pos)}
+                  />
+                ))}
+              </group>
+            );
+          })()}
+        </>
+      }
 
       {blocks.map(b => (
         <RoadTile
@@ -159,38 +191,8 @@ export default function Scene({ appMode, roadEditor, scenarioEditor }: Props) {
         />
       ))}
 
-      {selectedBlock && appMode === 'road' && (
-        <SelectionGizmo
-          position={selectedBlock.position}
-          mode={gizmoMode}
-          onMove={(newPos) => onMoveBlock(selectedId!, newPos)}
-          onRotate={(delta) => onRotateBlock(selectedId!, delta)}
-          isDraggingRef={isDraggingGizmoRef}
-        />
-      )}
-
-      {/* Selected actor's track + waypoints */}
-      {appMode === 'scenario' && selectedTrack && (() => {
-        const color = actorColorMap[selectedTrack.actorId] ?? '#ffffff';
-        return (
-          <group key={selectedTrack.actorId}>
-            <TrackLine track={selectedTrack} color={color} />
-            {selectedTrack.waypoints.map((wp) => (
-              <WaypointMarker
-                key={wp.id}
-                waypoint={wp}
-                color={color}
-                selected={selectedWaypointId === wp.id}
-                onSelect={() => onSelectWaypoint(wp.id)}
-                onMove={(pos) => onMoveWaypoint(selectedTrack.actorId, wp.id, pos)}
-              />
-            ))}
-          </group>
-        );
-      })()}
-
       {/* Actor meshes */}
-      {appMode === 'scenario' && scenario.actors.map(actor => {
+      {scenario.actors.map(actor => {
         const track = scenario.tracks.find(t => t.actorId === actor.id);
         if (!track) return null;
         const pose = evaluateTrack(track, scenarioTime);
