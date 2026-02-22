@@ -13,21 +13,12 @@ import { evaluateTrack } from './scenario/interpolate';
 import { useSceneMouseControls } from './hooks/useSceneMouseControls';
 import { useScenarioMouseControls } from './hooks/useScenarioMouseControls';
 
-interface Props {
-  appMode: AppMode;
+export interface RoadEditorProps {
   blocks: Block[];
   selectedRoadType: RoadType | null;
   ghostRotation: number;
   selectedId: string | null;
   gizmoMode: GizmoMode;
-  playing: boolean;
-  rendering: boolean;
-  scenario: Scenario;
-  scenarioTime: number;
-  scenarioPose: ScenarioPose | null;
-  selectedActorId: string;
-  selectedWaypointId: string | null;
-  onRenderComplete: () => void;
   onPlace: (pos: [number, number, number]) => void;
   onRotate: () => void;
   onSelectBlock: (id: string) => void;
@@ -35,39 +26,40 @@ interface Props {
   onCancelPlacement: () => void;
   onMoveBlock: (id: string, newPos: [number, number, number]) => void;
   onRotateBlock: (id: string, delta: 1 | -1) => void;
+}
+
+export interface ScenarioEditorProps {
+  scenario: Scenario;
+  scenarioTime: number;
+  scenarioPose: ScenarioPose | null;
+  selectedActorId: string;
+  selectedWaypointId: string | null;
+  playing: boolean;
+  rendering: boolean;
+  onRenderComplete: () => void;
   onScenarioTimeChange: (t: number) => void;
   onAddWaypoint: (actorId: string, time: number, position: [number, number, number]) => void;
   onMoveWaypoint: (actorId: string, waypointId: string, position: [number, number, number]) => void;
   onSelectWaypoint: (waypointId: string | null) => void;
 }
 
-export default function Scene({
-  appMode,
-  blocks,
-  selectedRoadType,
-  ghostRotation,
-  selectedId,
-  gizmoMode,
-  playing,
-  rendering,
-  scenario,
-  scenarioTime,
-  scenarioPose,
-  selectedActorId,
-  selectedWaypointId,
-  onRenderComplete,
-  onPlace,
-  onRotate,
-  onSelectBlock,
-  onDeselect,
-  onCancelPlacement,
-  onMoveBlock,
-  onRotateBlock,
-  onScenarioTimeChange,
-  onAddWaypoint,
-  onMoveWaypoint,
-  onSelectWaypoint,
-}: Props) {
+interface Props {
+  appMode: AppMode;
+  roadEditor: RoadEditorProps;
+  scenarioEditor: ScenarioEditorProps;
+}
+
+export default function Scene({ appMode, roadEditor, scenarioEditor }: Props) {
+  const {
+    blocks, selectedRoadType, ghostRotation, selectedId, gizmoMode,
+    onPlace, onRotate, onSelectBlock, onDeselect, onCancelPlacement,
+    onMoveBlock, onRotateBlock,
+  } = roadEditor;
+  const {
+    scenario, scenarioTime, scenarioPose, selectedActorId, selectedWaypointId,
+    playing, rendering,
+    onRenderComplete, onScenarioTimeChange, onAddWaypoint, onMoveWaypoint, onSelectWaypoint,
+  } = scenarioEditor;
   const { gl, camera } = useThree();
 
   const { ghost, isDraggingGizmoRef } = useSceneMouseControls({

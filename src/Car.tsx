@@ -118,7 +118,9 @@ function Model({ scenarioPose, rendering }: Props) {
   return (
     <group ref={groupRef}>
       <group ref={bodyRef}>
-        <primitive object={clone} scale={0.3} />
+        {!rendering ? (
+          <primitive object={clone} scale={0.3} />
+        ) : null}
       </group>
     </group>
   );

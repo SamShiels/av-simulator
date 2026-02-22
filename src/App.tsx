@@ -293,30 +293,34 @@ export default function App() {
       >
         <Scene
           appMode={appMode}
-          blocks={blocks}
-          selectedRoadType={selectedRoadType}
-          ghostRotation={ghostRotation}
-          selectedId={selectedObject?.kind === 'tile' ? selectedObject.id : null}
-          gizmoMode={gizmoMode}
-          playing={playing}
-          rendering={rendering}
-          scenario={scenario}
-          scenarioTime={scenarioTime}
-          scenarioPose={scenarioPose}
-          selectedActorId={selectedActorId}
-          selectedWaypointId={selectedWaypointId}
-          onRenderComplete={() => setRendering(false)}
-          onPlace={placeBlock}
-          onRotate={rotate}
-          onSelectBlock={handleSelectBlock}
-          onDeselect={handleDeselect}
-          onCancelPlacement={() => setSelectedRoadType(null)}
-          onMoveBlock={handleMoveBlock}
-          onRotateBlock={handleRotateBlock}
-          onScenarioTimeChange={setScenarioTime}
-          onAddWaypoint={addWaypoint}
-          onMoveWaypoint={moveWaypoint}
-          onSelectWaypoint={setSelectedWaypointId}
+          roadEditor={{
+            blocks,
+            selectedRoadType,
+            ghostRotation,
+            selectedId: selectedObject?.kind === 'tile' ? selectedObject.id : null,
+            gizmoMode,
+            onPlace: placeBlock,
+            onRotate: rotate,
+            onSelectBlock: handleSelectBlock,
+            onDeselect: handleDeselect,
+            onCancelPlacement: () => setSelectedRoadType(null),
+            onMoveBlock: handleMoveBlock,
+            onRotateBlock: handleRotateBlock,
+          }}
+          scenarioEditor={{
+            scenario,
+            scenarioTime,
+            scenarioPose,
+            selectedActorId,
+            selectedWaypointId,
+            playing,
+            rendering,
+            onRenderComplete: () => setRendering(false),
+            onScenarioTimeChange: setScenarioTime,
+            onAddWaypoint: addWaypoint,
+            onMoveWaypoint: moveWaypoint,
+            onSelectWaypoint: setSelectedWaypointId,
+          }}
         />
       </Canvas>
 

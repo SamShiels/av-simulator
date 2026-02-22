@@ -43,6 +43,12 @@ export default function WaypointMarker({ waypoint, color, selected, onSelect, on
 
   function handlePointerDown(e: ThreeEvent<PointerEvent>) {
     e.stopPropagation();
+    // Prevent the native click event from reaching the ground handler
+    gl.domElement.addEventListener(
+      'click',
+      (ev) => ev.stopImmediatePropagation(),
+      { capture: true, once: true },
+    );
     onSelect();
 
     let moved = false;
