@@ -1,13 +1,14 @@
 import { useEffect } from 'react';
-import { useEditorStore } from '../store/useEditorStore';
+import { useEditorStore, selectionActorId, selectionWaypointId } from '../store/useEditorStore';
 
 export function useEditorKeyBindings() {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key !== 'Delete' && e.key !== 'Backspace') return;
-      const { selectedWaypointId, selectedActorId, deleteWaypoint } = useEditorStore.getState();
-      if (selectedWaypointId) {
-        deleteWaypoint(selectedActorId, selectedWaypointId);
+      const { selection, deleteWaypoint } = useEditorStore.getState();
+      const wpId = selectionWaypointId(selection);
+      if (wpId) {
+        deleteWaypoint(selectionActorId(selection), wpId);
       }
     }
     window.addEventListener('keydown', onKeyDown);

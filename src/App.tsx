@@ -19,8 +19,10 @@ export interface Block {
   rotation: number; // 0–3, each step = 90°
 }
 
-export type SelectedObject =
+export type Selection =
   | { kind: 'tile'; id: string }
+  | { kind: 'actor'; id: string }
+  | { kind: 'waypoint'; actorId: string; id: string }
   | null;
 
 export default function App() {

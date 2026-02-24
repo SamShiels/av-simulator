@@ -1,17 +1,17 @@
-import { useEditorStore } from '../store/useEditorStore';
+import { useEditorStore, selectionActorId, selectionTileId } from '../store/useEditorStore';
 import Inspector, { type InspectedObject } from './Inspector';
 
 export default function InspectorPanel() {
-  const selectedObject = useEditorStore(s => s.selectedObject);
+  const selection = useEditorStore(s => s.selection);
   const blocks = useEditorStore(s => s.blocks);
-  const selectedActorId = useEditorStore(s => s.selectedActorId);
   const scenario = useEditorStore(s => s.scenario);
   const deleteSelectedBlock = useEditorStore(s => s.deleteSelectedBlock);
 
   let inspectedObject: InspectedObject | null = null;
 
-  if (selectedObject?.kind === 'tile') {
-    const block = blocks.find(b => b.id === selectedObject.id);
+  const tileId = selectionTileId(selection);
+  if (tileId) {
+    const block = blocks.find(b => b.id === tileId);
     if (block) {
       inspectedObject = {
         kind: 'tile',
@@ -21,8 +21,8 @@ export default function InspectorPanel() {
         rotation: block.rotation,
       };
     }
-  } else if (selectedActorId && selectedActorId !== 'ego') {
-    const actor = scenario.actors.find(a => a.id === selectedActorId);
+  } else if (selection?.kind === 'actor' && selection.id !== 'ego') {
+    const actor = scenario.actors.find(a => a.id === selectionActorId(selection));
     if (actor) {
       inspectedObject = {
         kind: 'actor',

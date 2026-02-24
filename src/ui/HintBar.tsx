@@ -2,12 +2,12 @@ import { useEditorStore } from '../store/useEditorStore';
 
 export default function HintBar() {
   const selectedRoadType = useEditorStore(s => s.selectedRoadType);
-  const drawingPath = useEditorStore(s => s.drawingPath);
+  const selection = useEditorStore(s => s.selection);
 
   let hint: string;
   if (selectedRoadType) {
     hint = 'Click to place · R to rotate · Right-click to cancel';
-  } else if (drawingPath) {
+  } else if (selection?.kind === 'actor' || selection?.kind === 'waypoint') {
     hint = 'Click to add waypoint · Drag to move · Backspace to delete';
   } else {
     hint = 'Alt+drag to pan · Scroll to zoom';

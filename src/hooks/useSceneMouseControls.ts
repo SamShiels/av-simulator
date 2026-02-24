@@ -14,7 +14,6 @@ interface Options {
   blocks: Block[];
   selectedId: string | null;
   selectedRoadType: RoadType | null;
-  drawingPath: boolean;
   onPlace: (pos: [number, number, number]) => void;
   onRotate: () => void;
   onSelectBlock: (id: string) => void;
@@ -28,15 +27,15 @@ export interface SceneMouseControls {
 }
 
 export function useSceneMouseControls({
-  gl, camera, blocks, selectedId, selectedRoadType, drawingPath,
+  gl, camera, blocks, selectedId, selectedRoadType,
   onPlace, onRotate, onSelectBlock, onDeselect, onCancelPlacement,
 }: Options): SceneMouseControls {
   const [ghost, setGhost] = useState<[number, number, number] | null>(null);
   const isDraggingGizmoRef = useRef(false);
 
   // Keep refs for latest state values...
-  const state = useRef({ blocks, selectedId, selectedRoadType, drawingPath });
-  state.current = { blocks, selectedId, selectedRoadType, drawingPath };
+  const state = useRef({ blocks, selectedId, selectedRoadType });
+  state.current = { blocks, selectedId, selectedRoadType };
 
   useViewportControls({
     gl,
@@ -50,7 +49,7 @@ export function useSceneMouseControls({
     },
     onGroundClick: (pos) => {
       if (isDraggingGizmoRef.current) return;
-      if (state.current.drawingPath) return;
+      if (!state.current.selectedRoadType && !state.current.selectedId) return;
       const snappedPos = snap(pos);
       
       const existing = state.current.blocks.find(

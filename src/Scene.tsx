@@ -9,7 +9,7 @@ import ActorMesh from './visuals/ActorMesh';
 import { evaluateTrack } from './scenario/interpolate';
 import { useSceneMouseControls } from './hooks/useSceneMouseControls';
 import { useScenarioMouseControls } from './hooks/useScenarioMouseControls';
-import { useEditorStore } from './store/useEditorStore';
+import { useEditorStore, selectionActorId, selectionTileId, selectionWaypointId } from './store/useEditorStore';
 
 const GHOST_WP_POLE_HEIGHT = 0.6;
 const GHOST_WP_SPHERE_RADIUS = 0.18;
@@ -19,15 +19,12 @@ export default function Scene() {
   const blocks = useEditorStore(s => s.blocks);
   const selectedRoadType = useEditorStore(s => s.selectedRoadType);
   const ghostRotation = useEditorStore(s => s.ghostRotation);
-  const selectedObject = useEditorStore(s => s.selectedObject);
+  const selection = useEditorStore(s => s.selection);
   const gizmoMode = useEditorStore(s => s.gizmoMode);
   const scenario = useEditorStore(s => s.scenario);
   const scenarioTime = useEditorStore(s => s.scenarioTime);
-  const selectedActorId = useEditorStore(s => s.selectedActorId);
-  const selectedWaypointId = useEditorStore(s => s.selectedWaypointId);
   const playing = useEditorStore(s => s.playing);
   const renderPass = useEditorStore(s => s.renderPass);
-  const drawingPath = useEditorStore(s => s.drawingPath);
 
   const placeBlock = useEditorStore(s => s.placeBlock);
   const rotateGhost = useEditorStore(s => s.rotateGhost);
@@ -41,16 +38,15 @@ export default function Scene() {
   const setScenarioTime = useEditorStore(s => s.setScenarioTime);
   const setRenderPass = useEditorStore(s => s.setRenderPass);
   const selectActor = useEditorStore(s => s.selectActor);
+  const selectWaypoint = useEditorStore(s => s.selectWaypoint);
 
   const rendering = renderPass !== 'idle';
-  const selectedId = selectedObject?.kind === 'tile' ? selectedObject.id : null;
+  const selectedId = selectionTileId(selection);
+  const selectedActorId = selectionActorId(selection);
+  const selectedWaypointId = selectionWaypointId(selection);
 
   const { gl, camera } = useThree();
   const [cursorPos, setCursorPos] = useState<[number, number, number] | null>(null);
-
-  useEffect(() => {
-    if (!drawingPath) setCursorPos(null);
-  }, [drawingPath]);
 
   const { ghost, isDraggingGizmoRef } = useSceneMouseControls({
     gl,
@@ -58,7 +54,6 @@ export default function Scene() {
     blocks,
     selectedId,
     selectedRoadType,
-    drawingPath,
     onPlace: placeBlock,
     onRotate: rotateGhost,
     onSelectBlock: selectBlock,
@@ -69,7 +64,7 @@ export default function Scene() {
   useScenarioMouseControls({
     gl,
     camera,
-    enabled: drawingPath && !selectedRoadType,
+    enabled: !selectedRoadType && selection?.kind !== 'tile',
     scenarioTime,
     selectedActorId,
     onAddWaypoint: addWaypoint,
@@ -115,7 +110,7 @@ export default function Scene() {
     ? scenario.egoTrack
     : scenario.tracks.find(t => t.actorId === selectedActorId) ?? null;
 
-  const ghostActor = drawingPath && selectedActorId !== 'ego'
+  const ghostActor = selectedActorId !== 'ego'
     ? scenario.actors.find(a => a.id === selectedActorId) ?? null
     : null;
 
@@ -162,7 +157,7 @@ export default function Scene() {
                     waypoint={wp}
                     color={color}
                     selected={selectedWaypointId === wp.id}
-                    onSelect={() => useEditorStore.setState({ selectedWaypointId: wp.id })}
+                    onSelect={() => selectWaypoint(selectedTrack.actorId, wp.id)}
                     onMove={(pos) => moveWaypoint(selectedTrack.actorId, wp.id, pos)}
                   />
                 ))}
@@ -170,7 +165,7 @@ export default function Scene() {
             );
           })()}
 
-          {drawingPath && cursorPos && (() => {
+          {!selectedRoadType && cursorPos && (() => {
             const [cx, , cz] = cursorPos;
             const color = actorColorMap[selectedActorId] ?? '#ffffff';
             return (
@@ -212,7 +207,6 @@ export default function Scene() {
         const pose = evaluateTrack(track, scenarioTime);
         if (!pose) return null;
         function handleActorSelect() {
-          if (drawingPath) return;
           selectActor(actor.id);
         }
         return (

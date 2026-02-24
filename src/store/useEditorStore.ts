@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { RoadType, GizmoMode, RenderPass, Block, SelectedObject } from '../App';
+import type { RoadType, GizmoMode, RenderPass, Block, Selection } from '../App';
 import type { Scenario, Waypoint, WaypointTrack, Actor, ActorKind } from '../scenario/types';
 import { defaultScenario, nextActorColor } from '../scenario/defaults';
 import { findRoadPath } from '../road/pathfinder';
@@ -24,6 +24,23 @@ function isEvenlyDistributed(waypoints: Waypoint[], duration: number): boolean {
   );
 }
 
+// ── Selection helpers (exported for use in components) ───────────────────────
+
+/** The "active" actor id — used to determine which track/lane is shown. */
+export function selectionActorId(selection: Selection): string {
+  if (selection?.kind === 'actor') return selection.id;
+  if (selection?.kind === 'waypoint') return selection.actorId;
+  return 'ego';
+}
+
+export function selectionTileId(selection: Selection): string | null {
+  return selection?.kind === 'tile' ? selection.id : null;
+}
+
+export function selectionWaypointId(sel: Selection): string | null {
+  return sel?.kind === 'waypoint' ? sel.id : null;
+}
+
 // ── Store types ──────────────────────────────────────────────────────────────
 
 interface EditorState {
@@ -31,19 +48,17 @@ interface EditorState {
   blocks: Block[];
   selectedRoadType: RoadType | null;
   ghostRotation: number;
-  selectedObject: SelectedObject;
   gizmoMode: GizmoMode;
+
+  selection: Selection;
 
   // Scenario
   scenario: Scenario;
   scenarioTime: number;
-  selectedWaypointId: string | null;
-  selectedActorId: string;
 
   // Playback / UI
   playing: boolean;
   renderPass: RenderPass;
-  drawingPath: boolean;
 }
 
 interface EditorActions {
@@ -58,10 +73,13 @@ interface EditorActions {
   deleteSelectedBlock: () => void;
   seedEgoTrack: () => void;
 
+  // Selection
+  selectActor: (id: string) => void;
+  selectWaypoint: (actorId: string, id: string) => void;
+
   // Actors
   addActor: (kind: ActorKind) => void;
   removeActor: (id: string) => void;
-  selectActor: (id: string) => void;
 
   // Waypoints
   addWaypoint: (actorId: string, time: number, pos: [number, number, number]) => void;
@@ -80,8 +98,6 @@ interface EditorActions {
 
   // UI
   setGizmoMode: (mode: GizmoMode) => void;
-  setDrawingPath: (drawing: boolean) => void;
-  toggleDrawingPath: () => void;
 }
 
 export type EditorStore = EditorState & EditorActions;
@@ -89,7 +105,6 @@ export type EditorStore = EditorState & EditorActions;
 // ── Store ────────────────────────────────────────────────────────────────────
 
 export const useEditorStore = create<EditorStore>()((set, get) => {
-  // Helper: update a track by actorId
   function setTrack(actorId: string, updater: (track: WaypointTrack) => WaypointTrack) {
     const { scenario } = get();
     if (actorId === 'ego') {
@@ -109,22 +124,18 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
     blocks: [{ id: 'default-0', position: [0, 0, 0], roadType: 'straight', rotation: 1 }],
     selectedRoadType: null,
     ghostRotation: 1,
-    selectedObject: null,
     gizmoMode: 'translate',
+    selection: { kind: 'actor', id: 'ego' },
 
     scenario: defaultScenario(),
     scenarioTime: 0,
-    selectedWaypointId: null,
-    selectedActorId: 'ego',
 
     playing: false,
     renderPass: 'idle',
-    drawingPath: false,
 
     // ── Road editor actions ────────────────────────────────────────────────
     selectRoadType: (type) => {
       set({ selectedRoadType: type });
-      if (type !== null) set({ drawingPath: false });
     },
 
     rotateGhost: () => set(s => ({ ghostRotation: (s.ghostRotation + 1) % 4 })),
@@ -184,8 +195,8 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
       });
     },
 
-    selectBlock: (id) => set({ selectedObject: { kind: 'tile', id } }),
-    deselectBlock: () => set({ selectedObject: null }),
+    selectBlock: (id) => set({ selection: { kind: 'tile', id } }),
+    deselectBlock: () => set({ selection: { kind: 'actor', id: 'ego' } }),
 
     moveBlock: (id, pos) => {
       const { blocks } = get();
@@ -204,13 +215,13 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
     },
 
     deleteSelectedBlock: () => {
-      const { selectedObject, blocks } = get();
-      if (!selectedObject || selectedObject.kind !== 'tile') return;
-      const block = blocks.find(b => b.id === selectedObject.id);
+      const { selection, blocks } = get();
+      if (selection?.kind !== 'tile') return;
+      const block = blocks.find(b => b.id === selection.id);
       if (block && block.position[0] === 0 && block.position[2] === 0) return;
       set({
-        blocks: blocks.filter(b => b.id !== selectedObject.id),
-        selectedObject: null,
+        blocks: blocks.filter(b => b.id !== selection.id),
+        selection: { kind: 'actor', id: 'ego' },
       });
     },
 
@@ -231,6 +242,10 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
       }));
       set({ scenario: { ...scenario, egoTrack: { actorId: 'ego', waypoints } } });
     },
+
+    // ── Selection actions ──────────────────────────────────────────────────
+    selectActor: (id) => set({ selection: { kind: 'actor', id } }),
+    selectWaypoint: (actorId, id) => set({ selection: { kind: 'waypoint', actorId, id } }),
 
     // ── Actor actions ──────────────────────────────────────────────────────
     addActor: (kind) => {
@@ -255,24 +270,23 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
           actors: [...scenario.actors, actor],
           tracks: [...scenario.tracks, track],
         },
-        selectedActorId: id,
-        drawingPath: true,
+        selection: { kind: 'actor', id },
       });
     },
 
     removeActor: (id) => {
-      const { scenario, selectedActorId } = get();
+      const { scenario, selection } = get();
+      const selActorId = selectionActorId(selection);
+      const needsReset = selActorId === id;
       set({
         scenario: {
           ...scenario,
           actors: scenario.actors.filter(a => a.id !== id),
           tracks: scenario.tracks.filter(t => t.actorId !== id),
         },
-        selectedActorId: selectedActorId === id ? 'ego' : selectedActorId,
+        selection: needsReset ? { kind: 'actor', id: 'ego' } : selection,
       });
     },
-
-    selectActor: (id) => set({ selectedActorId: id, selectedWaypointId: null }),
 
     // ── Waypoint actions ───────────────────────────────────────────────────
     addWaypoint: (actorId, _time, position) => {
@@ -305,7 +319,7 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
         }
       });
 
-      set({ selectedWaypointId: id });
+      set({ selection: { kind: 'waypoint', actorId, id } });
     },
 
     moveWaypoint: (actorId, wpId, position) => {
@@ -327,8 +341,10 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
         ...track,
         waypoints: track.waypoints.filter(w => w.id !== wpId),
       }));
-      const { selectedWaypointId } = get();
-      if (selectedWaypointId === wpId) set({ selectedWaypointId: null });
+      const { selection } = get();
+      if (selection?.kind === 'waypoint' && selection.id === wpId) {
+        set({ selection: { kind: 'actor', id: actorId } });
+      }
     },
 
     // ── Scenario actions ───────────────────────────────────────────────────
@@ -354,12 +370,9 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
     togglePlaying: () => set(s => ({ playing: !s.playing })),
     setScenarioTime: (t) => set({ scenarioTime: t }),
     setRenderPass: (pass) => set({ renderPass: pass }),
-
     startRender: () => set({ scenarioTime: 0, playing: false, renderPass: 'rgb' }),
 
     // ── UI actions ─────────────────────────────────────────────────────────
     setGizmoMode: (mode) => set({ gizmoMode: mode }),
-    setDrawingPath: (drawing) => set({ drawingPath: drawing }),
-    toggleDrawingPath: () => set(s => ({ drawingPath: !s.drawingPath })),
   };
 });

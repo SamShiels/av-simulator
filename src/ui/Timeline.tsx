@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { useEditorStore } from '../store/useEditorStore';
+import { useEditorStore, selectionActorId, selectionWaypointId } from '../store/useEditorStore';
 
 function clamp(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, v));
@@ -88,17 +88,16 @@ function Lane({
 export default function Timeline() {
   const scenario = useEditorStore(s => s.scenario);
   const scenarioTime = useEditorStore(s => s.scenarioTime);
-  const selectedActorId = useEditorStore(s => s.selectedActorId);
-  const selectedWaypointId = useEditorStore(s => s.selectedWaypointId);
+  const selection = useEditorStore(s => s.selection);
   const setScenarioTime = useEditorStore(s => s.setScenarioTime);
   const setDuration = useEditorStore(s => s.setDuration);
   const selectActor = useEditorStore(s => s.selectActor);
+  const selectWaypoint = useEditorStore(s => s.selectWaypoint);
   const setWaypointTime = useEditorStore(s => s.setWaypointTime);
   const scrubRef = useRef<HTMLDivElement>(null);
 
-  function selectWaypoint(actorId: string, waypointId: string) {
-    useEditorStore.setState({ selectedActorId: actorId, selectedWaypointId: waypointId });
-  }
+  const selectedActorId = selectionActorId(selection);
+  const selectedWaypointId = selectionWaypointId(selection);
 
   function startScrub(e: React.PointerEvent) {
     scrub(e.nativeEvent);

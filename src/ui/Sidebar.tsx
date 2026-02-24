@@ -86,9 +86,11 @@ function SubLabel({ children }: { children: string }) {
 
 export default function Sidebar() {
   const selectedRoadType = useEditorStore(s => s.selectedRoadType);
+  const blocks = useEditorStore(s => s.blocks);
   const scenario = useEditorStore(s => s.scenario);
-  const selectedActorId = useEditorStore(s => s.selectedActorId);
+  const selection = useEditorStore(s => s.selection);
   const selectRoadType = useEditorStore(s => s.selectRoadType);
+  const selectBlock = useEditorStore(s => s.selectBlock);
   const selectActor = useEditorStore(s => s.selectActor);
   const addActor = useEditorStore(s => s.addActor);
   const removeActor = useEditorStore(s => s.removeActor);
@@ -138,12 +140,13 @@ export default function Sidebar() {
           ))}
         </div>
 
-        <div className="mt-2 flex flex-col gap-0.5">
+        <SubLabel>Scene</SubLabel>
+        <div className="flex flex-col gap-0.5">
           <div
             onClick={() => selectActor('ego')}
             className={cn(
               'flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer text-xs transition-all',
-              selectedActorId === 'ego' ? 'bg-white/20 text-white' : 'text-white/50 hover:text-white hover:bg-white/10',
+              selection?.kind === 'actor' && selection.id === 'ego' ? 'bg-white/20 text-white' : 'text-white/50 hover:text-white hover:bg-white/10',
             )}
           >
             <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: '#22d3ee' }} />
@@ -156,7 +159,7 @@ export default function Sidebar() {
               onClick={() => selectActor(actor.id)}
               className={cn(
                 'flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer text-xs transition-all group',
-                selectedActorId === actor.id ? 'bg-white/20 text-white' : 'text-white/50 hover:text-white hover:bg-white/10',
+                selection?.kind === 'actor' && selection.id === actor.id ? 'bg-white/20 text-white' : 'text-white/50 hover:text-white hover:bg-white/10',
               )}
             >
               <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: actor.color }} />
@@ -173,6 +176,33 @@ export default function Sidebar() {
               </button>
             </div>
           ))}
+
+          {blocks.map(block => {
+            const isOrigin = block.position[0] === 0 && block.position[2] === 0;
+            const isSelected = selection?.kind === 'tile' && selection.id === block.id;
+            const label = block.roadType.charAt(0).toUpperCase() + block.roadType.slice(1);
+            const pos = `(${block.position[0]}, ${block.position[2]})`;
+            return (
+              <div
+                key={block.id}
+                onClick={() => { selectBlock(block.id); selectRoadType(null); }}
+                className={cn(
+                  'flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer text-xs transition-all',
+                  isSelected ? 'bg-white/20 text-white' : 'text-white/50 hover:text-white hover:bg-white/10',
+                )}
+              >
+                <span className="w-2.5 h-2.5 rounded-sm shrink-0 bg-white/20" />
+                <span className="flex-1 truncate">{label}</span>
+                <span className="font-mono text-[10px] text-white/30">{pos}</span>
+                {isOrigin && (
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="text-white/20 shrink-0">
+                    <rect x="3" y="11" width="18" height="11" rx="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                )}
+              </div>
+            );
+          })}
         </div>
 
         <SubLabel>Scenery</SubLabel>
