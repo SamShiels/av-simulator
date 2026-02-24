@@ -9,7 +9,7 @@ import ActorMesh from './visuals/ActorMesh';
 import { evaluateTrack } from './scenario/interpolate';
 import { useSceneMouseControls } from './hooks/useSceneMouseControls';
 import { useScenarioMouseControls } from './hooks/useScenarioMouseControls';
-import { useEditorStore, selectionActorId, selectionTileId, selectionWaypointId } from './store/useEditorStore';
+import { useEditorStore, selectionActorId, selectionTileId } from './store/useEditorStore';
 
 const GHOST_WP_POLE_HEIGHT = 0.6;
 const GHOST_WP_SPHERE_RADIUS = 0.18;
@@ -45,7 +45,7 @@ export default function Scene() {
   const rendering = renderPass !== 'idle';
   const selectedId = selectionTileId(selection);
   const selectedActorId = selectionActorId(selection);
-  const selectedWaypointId = selectionWaypointId(selection);
+  const selectedWaypointId = useEditorStore(s => s.selectedWaypointId);
 
   const { gl, camera } = useThree();
   const [cursorPos, setCursorPos] = useState<[number, number, number] | null>(null);

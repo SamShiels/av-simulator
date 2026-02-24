@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { useEditorStore, selectionActorId, selectionWaypointId } from '../store/useEditorStore';
+import { useEditorStore, selectionActorId } from '../store/useEditorStore';
 
 function clamp(v: number, lo: number, hi: number) {
   return Math.max(lo, Math.min(hi, v));
@@ -97,7 +97,7 @@ export default function Timeline() {
   const scrubRef = useRef<HTMLDivElement>(null);
 
   const selectedActorId = selectionActorId(selection);
-  const selectedWaypointId = selectionWaypointId(selection);
+  const selectedWaypointId = useEditorStore(s => s.selectedWaypointId);
 
   function startScrub(e: React.PointerEvent) {
     scrub(e.nativeEvent);

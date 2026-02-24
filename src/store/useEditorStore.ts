@@ -29,16 +29,11 @@ function isEvenlyDistributed(waypoints: Waypoint[], duration: number): boolean {
 /** The "active" actor id — used to determine which track/lane is shown. */
 export function selectionActorId(selection: Selection): string {
   if (selection?.kind === 'actor') return selection.id;
-  if (selection?.kind === 'waypoint') return selection.actorId;
   return 'ego';
 }
 
 export function selectionTileId(selection: Selection): string | null {
   return selection?.kind === 'tile' ? selection.id : null;
-}
-
-export function selectionWaypointId(sel: Selection): string | null {
-  return sel?.kind === 'waypoint' ? sel.id : null;
 }
 
 // ── Store types ──────────────────────────────────────────────────────────────
@@ -52,6 +47,7 @@ interface EditorState {
 
   selection: Selection;
   drawingPath: boolean;
+  selectedWaypointId: string | null;
 
   // Scenario
   scenario: Scenario;
@@ -129,6 +125,7 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
     gizmoMode: 'translate',
     selection: { kind: 'actor', id: 'ego' },
     drawingPath: false,
+    selectedWaypointId: null,
 
     scenario: defaultScenario(),
     scenarioTime: 0,
@@ -198,8 +195,8 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
       });
     },
 
-    selectBlock: (id) => set({ selection: { kind: 'tile', id }, drawingPath: false }),
-    deselectBlock: () => set({ selection: { kind: 'actor', id: 'ego' }, drawingPath: false }),
+    selectBlock: (id) => set({ selection: { kind: 'tile', id }, drawingPath: false, selectedWaypointId: null }),
+    deselectBlock: () => set({ selection: { kind: 'actor', id: 'ego' }, drawingPath: false, selectedWaypointId: null }),
 
     moveBlock: (id, pos) => {
       const { blocks } = get();
@@ -226,6 +223,7 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
         blocks: blocks.filter(b => b.id !== selection.id),
         selection: { kind: 'actor', id: 'ego' },
         drawingPath: false,
+        selectedWaypointId: null,
       });
     },
 
@@ -248,8 +246,8 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
     },
 
     // ── Selection actions ──────────────────────────────────────────────────
-    selectActor: (id) => set({ selection: { kind: 'actor', id }, drawingPath: false }),
-    selectWaypoint: (actorId, id) => set({ selection: { kind: 'waypoint', actorId, id } }),
+    selectActor: (id) => set({ selection: { kind: 'actor', id }, drawingPath: false, selectedWaypointId: null }),
+    selectWaypoint: (_actorId, id) => set({ selectedWaypointId: id }),
 
     // ── Actor actions ──────────────────────────────────────────────────────
     addActor: (kind) => {
@@ -276,6 +274,7 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
         },
         selection: { kind: 'actor', id },
         drawingPath: false,
+        selectedWaypointId: null,
       });
     },
 
@@ -291,6 +290,7 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
         },
         selection: needsReset ? { kind: 'actor', id: 'ego' } : selection,
         drawingPath: false,
+        selectedWaypointId: null,
       });
     },
 
@@ -325,7 +325,7 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
         }
       });
 
-      set({ selection: { kind: 'waypoint', actorId, id } });
+      set({ selectedWaypointId: id });
     },
 
     moveWaypoint: (actorId, wpId, position) => {
@@ -347,9 +347,9 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
         ...track,
         waypoints: track.waypoints.filter(w => w.id !== wpId),
       }));
-      const { selection } = get();
-      if (selection?.kind === 'waypoint' && selection.id === wpId) {
-        set({ selection: { kind: 'actor', id: actorId } });
+      const { selectedWaypointId } = get();
+      if (selectedWaypointId === wpId) {
+        set({ selectedWaypointId: null });
       }
     },
 
