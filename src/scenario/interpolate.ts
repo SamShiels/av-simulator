@@ -56,25 +56,29 @@ export function evaluateTrack(track: WaypointTrack, time: number): ScenarioPose 
   };
 }
 
-export function createSpeedProfile(track: WaypointTrack, accel: number, brake: number, top_speed: number) {
+export function createSpeedProfile(track: WaypointTrack, accel: number, brake: number, top_speed: number): WaypointTrack {
   const _curve = new THREE.CatmullRomCurve3([], false, 'centripetal');
   const wps = track.waypoints;
+  if (wps.length < 2) return track;
 
   _curve.points = wps.map(w => new THREE.Vector3(w.position[0], w.position[1], w.position[2]));
   const total_length = _curve.getLength();
+
+  const wp_distances = wps.map((_, index) => {
+    if (index === 0) return 0;
+    if (index === wps.length - 1) return total_length;
+
+    const waypoint_progress_percentage = index / (wps.length - 1);
+    const current_waypoint_distance = _curve.getUtoTmapping(waypoint_progress_percentage, waypoint_progress_percentage) * total_length;
+
+    return current_waypoint_distance;
+  });
 
   const forward_pass = [wps[0].targetSpeed];
 
   for (let i = 0; i < wps.length - 1; i++) {
     const s_current = forward_pass[i];
-
-    const waypoint_progress_percentage = i / (wps.length - 1);
-    const current_waypoint_distance = _curve.getUtoTmapping(waypoint_progress_percentage, waypoint_progress_percentage) * total_length;
-
-    const next_waypoint_progress_percentage = (i + 1) / (wps.length - 1);
-    const next_waypoint_distance = _curve.getUtoTmapping(next_waypoint_progress_percentage, next_waypoint_progress_percentage) * total_length;
-
-    const distance_to_next_waypoint = next_waypoint_distance - current_waypoint_distance;
+    const distance_to_next_waypoint = wp_distances[i + 1] - wp_distances[i];
 
     let highest_speed = Math.sqrt(Math.pow(s_current, 2) + (2 * accel * distance_to_next_waypoint));
     highest_speed = Math.min(highest_speed, top_speed);
@@ -88,14 +92,7 @@ export function createSpeedProfile(track: WaypointTrack, accel: number, brake: n
 
   for (let i = wps.length - 1; i > 0; i--) {
     const s_current = backward_pass[i];
-
-    const waypoint_progress_percentage = i / (wps.length - 1);
-    const current_waypoint_distance = _curve.getUtoTmapping(waypoint_progress_percentage, waypoint_progress_percentage) * total_length;
-
-    const prev_waypoint_progress_percentage = (i - 1) / (wps.length - 1);
-    const prev_waypoint_distance = _curve.getUtoTmapping(prev_waypoint_progress_percentage, prev_waypoint_progress_percentage) * total_length;
-
-    const distance_to_prev_waypoint = current_waypoint_distance - prev_waypoint_distance;
+    const distance_to_prev_waypoint = wp_distances[i] - wp_distances[i - 1];
 
     let highest_safe_speed = Math.sqrt(Math.pow(s_current, 2) + (2 * brake * distance_to_prev_waypoint));
     
@@ -107,8 +104,15 @@ export function createSpeedProfile(track: WaypointTrack, accel: number, brake: n
     backward_pass[i - 1] = highest_safe_speed;
   }
 
-  for (let i = 0; i < wps.length; i++) {
-    // The Magic Rule: The car must always obey the SMALLER number.
-    wps[i].targetSpeed = Math.min(forward_pass[i], backward_pass[i]);
+  const corrected_waypoints = wps.map((w, i) => {
+    return {
+      ...w,
+      targetSpeed: Math.min(forward_pass[i], backward_pass[i], top_speed)
+    }
+  });
+
+  return {
+    ...track,
+    waypoints: corrected_waypoints
   }
 }

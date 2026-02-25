@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useThree, useFrame } from '@react-three/fiber';
 import Car from './Car';
 import RoadTile from './visuals/RoadTile';
@@ -6,7 +6,8 @@ import SelectionGizmo from './visuals/SelectionGizmo';
 import WaypointMarker from './visuals/WaypointMarker';
 import TrackLine from './visuals/TrackLine';
 import ActorMesh from './visuals/ActorMesh';
-import { evaluateTrack } from './scenario/interpolate';
+import { evaluateTrack, createSpeedProfile } from './scenario/interpolate';
+import { EGO_ACCEL, EGO_BRAKE, EGO_TOP_SPEED } from './constants';
 import { useSceneMouseControls } from './hooks/useSceneMouseControls';
 import { useScenarioMouseControls } from './hooks/useScenarioMouseControls';
 import { useEditorStore, selectionActorId, selectionTileId } from './store/useEditorStore';
@@ -116,7 +117,15 @@ export default function Scene() {
     ? scenario.actors.find(a => a.id === selectedActorId) ?? null
     : null;
 
-  const scenarioPose = evaluateTrack(scenario.egoTrack, scenarioTime);
+  const compiledEgoTrack = useMemo(
+    () => createSpeedProfile(scenario.egoTrack, EGO_ACCEL, EGO_BRAKE, EGO_TOP_SPEED),
+    [scenario.egoTrack],
+  );
+
+  console.log(compiledEgoTrack);
+  console.log(scenario.egoTrack);
+
+  const scenarioPose = evaluateTrack(compiledEgoTrack, scenarioTime);
 
   return (
     <>
