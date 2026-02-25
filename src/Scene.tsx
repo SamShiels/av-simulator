@@ -40,6 +40,7 @@ export default function Scene() {
   const setRenderPass = useEditorStore(s => s.setRenderPass);
   const selectActor = useEditorStore(s => s.selectActor);
   const selectWaypoint = useEditorStore(s => s.selectWaypoint);
+  const setWaypointPopupPos = useEditorStore(s => s.setWaypointPopupPos);
 
   const drawingPath = useEditorStore(s => s.drawingPath);
 
@@ -168,7 +169,10 @@ export default function Scene() {
                     waypoint={wp}
                     color={color}
                     selected={selectedWaypointId === wp.id}
-                    onSelect={() => selectWaypoint(selectedTrack.actorId, wp.id)}
+                    onSelect={(screenX, screenY) => {
+                      selectWaypoint(selectedTrack.actorId, wp.id);
+                      setWaypointPopupPos({ x: screenX, y: screenY });
+                    }}
                     onMove={(pos) => moveWaypoint(selectedTrack.actorId, wp.id, pos)}
                   />
                 ))}

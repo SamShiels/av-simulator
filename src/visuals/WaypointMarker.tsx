@@ -15,7 +15,7 @@ interface Props {
   waypoint: Waypoint;
   color: string;
   selected: boolean;
-  onSelect: () => void;
+  onSelect: (screenX: number, screenY: number) => void;
   onMove: (pos: [number, number, number]) => void;
 }
 
@@ -43,13 +43,14 @@ export default function WaypointMarker({ waypoint, color, selected, onSelect, on
 
   function handlePointerDown(e: ThreeEvent<PointerEvent>) {
     e.stopPropagation();
+    e.nativeEvent.stopPropagation();
     // Prevent the native click event from reaching the ground handler
     gl.domElement.addEventListener(
       'click',
       (ev) => ev.stopImmediatePropagation(),
       { capture: true, once: true },
     );
-    onSelect();
+    onSelect(e.nativeEvent.clientX, e.nativeEvent.clientY);
 
     let moved = false;
 

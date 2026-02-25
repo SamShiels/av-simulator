@@ -5,6 +5,7 @@ import Sidebar from './ui/Sidebar';
 import Timeline from './ui/Timeline';
 import HintBar from './ui/HintBar';
 import InspectorPanel from './ui/InspectorPanel';
+import WaypointPopup from './ui/WaypointPopup';
 import { useEditorKeyBindings } from './hooks/useEditorKeyBindings';
 import { useEditorStore } from './store/useEditorStore';
 
@@ -44,6 +45,7 @@ export default function App() {
       <Sidebar />
       <HintBar />
       <Timeline />
+      <WaypointPopup />
     </div>
   );
 }

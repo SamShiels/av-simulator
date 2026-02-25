@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { RoadType, GizmoMode, RenderPass, Block, Selection } from '../App';
 import type { Scenario, Waypoint, WaypointTrack, Actor, ActorKind } from '../scenario/types';
 import { defaultScenario, nextActorColor } from '../scenario/defaults';
+import { EGO_TOP_SPEED } from '../constants';
 
 // ── Private helpers ──────────────────────────────────────────────────────────
 
@@ -46,6 +47,8 @@ interface EditorState {
   selection: Selection;
   drawingPath: boolean;
   selectedWaypointId: string | null;
+  selectedWaypointActorId: string | null;
+  waypointPopupPos: { x: number; y: number } | null;
 
   // Scenario
   scenario: Scenario;
@@ -71,6 +74,11 @@ interface EditorActions {
   // Selection
   selectActor: (id: string) => void;
   selectWaypoint: (actorId: string, id: string) => void;
+  setWaypointPopupPos: (pos: { x: number; y: number } | null) => void;
+  dismissWaypointPopup: () => void;
+
+  // Waypoint properties
+  setWaypointTargetSpeed: (actorId: string, wpId: string, speed: number) => void;
 
   // Actors
   addActor: (kind: ActorKind) => void;
@@ -124,6 +132,8 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
     selection: { kind: 'actor', id: 'ego' },
     drawingPath: false,
     selectedWaypointId: null,
+    selectedWaypointActorId: null,
+    waypointPopupPos: null,
 
     scenario: defaultScenario(),
     scenarioTime: 0,
@@ -152,8 +162,8 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
       set({ blocks: [...blocks, newBlock] });
     },
 
-    selectBlock: (id) => set({ selection: { kind: 'tile', id }, drawingPath: false, selectedWaypointId: null }),
-    deselectBlock: () => set({ selection: { kind: 'actor', id: 'ego' }, drawingPath: false, selectedWaypointId: null }),
+    selectBlock: (id) => set({ selection: { kind: 'tile', id }, drawingPath: false, selectedWaypointId: null, selectedWaypointActorId: null, waypointPopupPos: null }),
+    deselectBlock: () => set({ selection: { kind: 'actor', id: 'ego' }, drawingPath: false, selectedWaypointId: null, selectedWaypointActorId: null, waypointPopupPos: null }),
 
     moveBlock: (id, pos) => {
       const { blocks } = get();
@@ -181,6 +191,8 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
         selection: { kind: 'actor', id: 'ego' },
         drawingPath: false,
         selectedWaypointId: null,
+        selectedWaypointActorId: null,
+        waypointPopupPos: null,
       });
     },
 
@@ -189,14 +201,16 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
       set({
         scenario: {
           ...scenario,
-          egoTrack: { actorId: 'ego', waypoints: [{ id: uid(), time: 0, position: [0, 0, 0] }] },
+          egoTrack: { actorId: 'ego', waypoints: [{ id: uid(), time: 0, position: [0, 0, 0], targetSpeed: EGO_TOP_SPEED }] },
         },
       });
     },
 
     // ── Selection actions ──────────────────────────────────────────────────
-    selectActor: (id) => set({ selection: { kind: 'actor', id }, drawingPath: false, selectedWaypointId: null }),
-    selectWaypoint: (_actorId, id) => set({ selectedWaypointId: id }),
+    selectActor: (id) => set({ selection: { kind: 'actor', id }, drawingPath: false, selectedWaypointId: null, selectedWaypointActorId: null, waypointPopupPos: null }),
+    selectWaypoint: (actorId, id) => set({ selectedWaypointId: id, selectedWaypointActorId: actorId }),
+    setWaypointPopupPos: (pos) => set({ waypointPopupPos: pos }),
+    dismissWaypointPopup: () => set({ selectedWaypointId: null, selectedWaypointActorId: null, waypointPopupPos: null }),
 
     // ── Actor actions ──────────────────────────────────────────────────────
     addActor: (kind) => {
@@ -214,7 +228,7 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
         label: `${kindLabels[kind]} ${count + 1}`,
         color: nextActorColor(count),
       };
-      const track: WaypointTrack = { actorId: id, waypoints: [{ id: uid(), time: 0, position: [0, 0, 0] }] };
+      const track: WaypointTrack = { actorId: id, waypoints: [{ id: uid(), time: 0, position: [0, 0, 0], targetSpeed: EGO_TOP_SPEED }] };
       set({
         scenario: {
           ...scenario,
@@ -224,6 +238,8 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
         selection: { kind: 'actor', id },
         drawingPath: false,
         selectedWaypointId: null,
+        selectedWaypointActorId: null,
+        waypointPopupPos: null,
       });
     },
 
@@ -240,6 +256,8 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
         selection: needsReset ? { kind: 'actor', id: 'ego' } : selection,
         drawingPath: false,
         selectedWaypointId: null,
+        selectedWaypointActorId: null,
+        waypointPopupPos: null,
       });
     },
 
@@ -252,7 +270,7 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
       setTrack(actorId, track => {
         const wps = track.waypoints;
         if (isEvenlyDistributed(wps, dur)) {
-          const newWps = [...wps, { id, time: dur, position }];
+          const newWps = [...wps, { id, time: dur, position, targetSpeed: EGO_TOP_SPEED }];
           const n = newWps.length;
           return {
             ...track,
@@ -269,7 +287,7 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
           const newTime = Math.min(dur, lastTime + avgGap);
           return {
             ...track,
-            waypoints: sortByTime([...wps, { id, time: newTime, position }]),
+            waypoints: sortByTime([...wps, { id, time: newTime, position, targetSpeed: EGO_TOP_SPEED }]),
           };
         }
       });
@@ -304,8 +322,15 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
       }));
       const { selectedWaypointId } = get();
       if (selectedWaypointId === wpId) {
-        set({ selectedWaypointId: null });
+        set({ selectedWaypointId: null, selectedWaypointActorId: null, waypointPopupPos: null });
       }
+    },
+
+    setWaypointTargetSpeed: (actorId, wpId, speed) => {
+      setTrack(actorId, track => ({
+        ...track,
+        waypoints: track.waypoints.map(w => w.id === wpId ? { ...w, targetSpeed: speed } : w),
+      }));
     },
 
     // ── Scenario actions ───────────────────────────────────────────────────
@@ -338,7 +363,11 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
     toggleDrawingPath: () => {
       const { selection, drawingPath } = get();
       if (!drawingPath && selection?.kind !== 'actor') return;
-      set({ drawingPath: !drawingPath });
+      const disabling = drawingPath;
+      set({
+        drawingPath: !drawingPath,
+        ...(disabling ? { selectedWaypointId: null, selectedWaypointActorId: null, waypointPopupPos: null } : {}),
+      });
     },
   };
 });
