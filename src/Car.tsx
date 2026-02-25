@@ -1,4 +1,4 @@
-import { Suspense, useRef, useMemo, useEffect } from 'react';
+import { Suspense, useRef, useMemo, useEffect, type RefObject } from 'react';
 import { useLoader, useFrame, useThree } from '@react-three/fiber';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
@@ -27,11 +27,11 @@ function roadNoiseY(t: number): number {
 }
 
 interface Props {
-  scenarioPose: ScenarioPose | null;
+  poseRef: RefObject<ScenarioPose | null>;
   rendering: boolean;
 }
 
-function Model({ scenarioPose, rendering }: Props) {
+function Model({ poseRef, rendering }: Props) {
   const materials = useLoader(MTLLoader, MTL);
   const obj = useLoader(OBJLoader, OBJ, loader => {
     materials.preload();
@@ -80,12 +80,13 @@ function Model({ scenarioPose, rendering }: Props) {
 
   useFrame((_, delta) => {
     if (!groupRef.current || !bodyRef.current) return;
-    if (!scenarioPose) return;
+    const pose = poseRef.current;
+    if (!pose) return;
 
     timeRef.current += delta;
     const time = timeRef.current;
 
-    const [px, py, pz] = scenarioPose.position;
+    const [px, py, pz] = pose.position;
     const pos = new THREE.Vector3(px, py, pz);
 
     // Derive tangent from frame-to-frame displacement for suspension
@@ -96,7 +97,7 @@ function Model({ scenarioPose, rendering }: Props) {
     prevPosRef.current = pos.clone();
 
     groupRef.current.position.copy(pos);
-    groupRef.current.rotation.y = scenarioPose.yaw;
+    groupRef.current.rotation.y = pose.yaw;
 
     const targetPitch = -Math.asin(THREE.MathUtils.clamp(tangent.y, -1, 1)) * PITCH_STRENGTH;
     pitchRef.current = THREE.MathUtils.lerp(pitchRef.current, targetPitch, delta * PITCH_SMOOTHING);
@@ -109,7 +110,7 @@ function Model({ scenarioPose, rendering }: Props) {
 
     if (rendering) {
       dashCam.position.set(px, py + DASHCAM_HEIGHT + noiseY, pz);
-      dashCam.rotation.y = scenarioPose.yaw + Math.PI;
+      dashCam.rotation.y = pose.yaw + Math.PI;
       dashCam.rotation.x = pitchRef.current;
       dashCam.rotation.z = -rollRef.current;
     }
@@ -126,10 +127,10 @@ function Model({ scenarioPose, rendering }: Props) {
   );
 }
 
-export default function Car({ scenarioPose, rendering }: Props) {
+export default function Car({ poseRef, rendering }: Props) {
   return (
     <Suspense fallback={null}>
-      <Model scenarioPose={scenarioPose} rendering={rendering} />
+      <Model poseRef={poseRef} rendering={rendering} />
     </Suspense>
   );
 }

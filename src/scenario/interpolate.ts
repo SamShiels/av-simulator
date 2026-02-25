@@ -56,6 +56,77 @@ export function evaluateTrack(track: WaypointTrack, time: number): ScenarioPose 
   };
 }
 
+export interface AdvanceResult {
+  pose: ScenarioPose;
+  speed: number;
+  progress: number;
+}
+
+export function advance_actor(track: WaypointTrack, current_speed: number, current_progress: number, delta: number, acceleration: number, brake: number): AdvanceResult | null {
+  const wps = track.waypoints;
+  const segments = wps.length;
+
+  if (segments === 0) {
+    return null;
+  }
+
+  if (segments === 1) {
+    const [x, y, z] = wps[0].position;
+    return { pose: { position: [x, y, z], yaw: 0 }, speed: current_speed, progress: current_progress };
+  }
+
+  _curve.points = wps.map(w => new THREE.Vector3(w.position[0], w.position[1], w.position[2]));
+  const total_length = _curve.getLength();
+
+  const wp_distances = wps.map((_, index) => {
+    if (index === 0) return 0;
+    if (index === wps.length - 1) return total_length;
+
+    const waypoint_progress_percentage = index / (wps.length - 1);
+    const current_waypoint_distance = _curve.getUtoTmapping(waypoint_progress_percentage, waypoint_progress_percentage) * total_length;
+
+    return current_waypoint_distance;
+  });
+
+  let i = 0;
+  while (i < segments - 2 && wp_distances[i + 1] <= current_progress) i++;
+
+  const next_waypoint = wps[i + 1];
+
+  const get_new_speed = (): number => {
+    if (current_speed < next_waypoint.targetSpeed) {
+      // Speed up!
+      return current_speed + (acceleration * delta);
+    } else if (current_speed > next_waypoint.targetSpeed) {
+      // Slow down!
+      const braking_distance = (Math.pow(current_speed, 2) - Math.pow(next_waypoint.targetSpeed, 2)) / (acceleration * 2);
+      const distance_to_next_waypoint = wp_distances[i + 1] - current_progress;
+      
+      if (distance_to_next_waypoint < braking_distance) {
+        return Math.max(current_speed - (brake * delta), next_waypoint.targetSpeed);
+      }
+    }
+
+    return current_speed;
+  }
+
+  const updated_speed = get_new_speed();
+  const updated_progress = current_progress + updated_speed;
+
+  const progress_percentage = updated_progress / total_length;
+
+  _curve.getPointAt(progress_percentage, _pos);
+  _curve.getTangentAt(progress_percentage, _tangent);
+
+  const yaw = Math.atan2(_tangent.x, _tangent.z);
+
+  return {
+    pose: { position: [_pos.x, _pos.y, _pos.z], yaw },
+    speed: updated_speed,
+    progress: updated_progress,
+  };
+}
+
 export function createSpeedProfile(track: WaypointTrack, accel: number, brake: number, top_speed: number): WaypointTrack {
   const _curve = new THREE.CatmullRomCurve3([], false, 'centripetal');
   const wps = track.waypoints;

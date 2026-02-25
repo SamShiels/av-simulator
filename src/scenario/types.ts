@@ -30,3 +30,10 @@ export interface ScenarioPose {
   position: [number, number, number];
   yaw: number; // radians
 }
+
+export interface ActorPosition {
+  position: [number, number, number];
+  physical_progress: number; // How far along the track we are in meters
+  speed: number;
+  yaw: number; // radians
+}
