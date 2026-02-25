@@ -4,6 +4,7 @@ export interface Waypoint {
   id: string;
   time: number; // seconds along the timeline
   position: [number, number, number]; // world XYZ
+  targetSpeed: number;
 }
 
 export interface WaypointTrack {

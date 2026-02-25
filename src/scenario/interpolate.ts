@@ -55,3 +55,60 @@ export function evaluateTrack(track: WaypointTrack, time: number): ScenarioPose 
     yaw,
   };
 }
+
+export function createSpeedProfile(track: WaypointTrack, accel: number, brake: number, top_speed: number) {
+  const _curve = new THREE.CatmullRomCurve3([], false, 'centripetal');
+  const wps = track.waypoints;
+
+  _curve.points = wps.map(w => new THREE.Vector3(w.position[0], w.position[1], w.position[2]));
+  const total_length = _curve.getLength();
+
+  const forward_pass = [wps[0].targetSpeed];
+
+  for (let i = 0; i < wps.length - 1; i++) {
+    const s_current = forward_pass[i];
+
+    const waypoint_progress_percentage = i / (wps.length - 1);
+    const current_waypoint_distance = _curve.getUtoTmapping(waypoint_progress_percentage, waypoint_progress_percentage) * total_length;
+
+    const next_waypoint_progress_percentage = (i + 1) / (wps.length - 1);
+    const next_waypoint_distance = _curve.getUtoTmapping(next_waypoint_progress_percentage, next_waypoint_progress_percentage) * total_length;
+
+    const distance_to_next_waypoint = next_waypoint_distance - current_waypoint_distance;
+
+    let highest_speed = Math.sqrt(Math.pow(s_current, 2) + (2 * accel * distance_to_next_waypoint));
+    highest_speed = Math.min(highest_speed, top_speed);
+    highest_speed = Math.min(highest_speed, wps[i + 1].targetSpeed);
+
+    forward_pass.push(highest_speed);
+  }
+
+  const backward_pass = new Array(wps.length);
+  backward_pass[wps.length - 1] = wps[wps.length - 1].targetSpeed;
+
+  for (let i = wps.length - 1; i > 0; i--) {
+    const s_current = backward_pass[i];
+
+    const waypoint_progress_percentage = i / (wps.length - 1);
+    const current_waypoint_distance = _curve.getUtoTmapping(waypoint_progress_percentage, waypoint_progress_percentage) * total_length;
+
+    const prev_waypoint_progress_percentage = (i - 1) / (wps.length - 1);
+    const prev_waypoint_distance = _curve.getUtoTmapping(prev_waypoint_progress_percentage, prev_waypoint_progress_percentage) * total_length;
+
+    const distance_to_prev_waypoint = current_waypoint_distance - prev_waypoint_distance;
+
+    let highest_safe_speed = Math.sqrt(Math.pow(s_current, 2) + (2 * brake * distance_to_prev_waypoint));
+    
+    // Cap it to top speed
+    highest_safe_speed = Math.min(highest_safe_speed, top_speed);
+    
+    // Cap it to the wishlist speed of the waypoint behind us!
+    highest_safe_speed = Math.min(highest_safe_speed, wps[i - 1].targetSpeed);
+    backward_pass[i - 1] = highest_safe_speed;
+  }
+
+  for (let i = 0; i < wps.length; i++) {
+    // The Magic Rule: The car must always obey the SMALLER number.
+    wps[i].targetSpeed = Math.min(forward_pass[i], backward_pass[i]);
+  }
+}
