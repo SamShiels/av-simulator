@@ -16,6 +16,7 @@ export interface Waypoint {
 export interface WaypointTrack {
   actorId: string;
   waypoints: Waypoint[]; // sorted by time ascending
+  length: number;
 }
 
 export interface Actor {

@@ -2,7 +2,7 @@ import type { Scenario, WaypointTrack } from './types';
 import { EGO_ACCEL, EGO_BRAKE, EGO_TOP_SPEED } from '../constants';
 
 export function defaultEgoTrack(): WaypointTrack {
-  return { actorId: 'ego', waypoints: [] };
+  return { actorId: 'ego', waypoints: [], length: 0 };
 }
 
 export function defaultScenario(): Scenario {

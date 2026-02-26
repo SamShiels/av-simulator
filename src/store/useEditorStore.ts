@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { RoadType, SceneryType, GizmoMode, RenderPass, Block, SceneryItem, Selection } from '../App';
 import type { Scenario, Waypoint, WaypointTrack, Actor, ActorKind, ActorStats } from '../scenario/types';
 import { defaultScenario, nextActorColor } from '../scenario/defaults';
+import { createSpeedProfile } from '../scenario/interpolate';
 import {
   EGO_ACCEL, EGO_BRAKE, EGO_TOP_SPEED,
   PEDESTRIAN_ACCEL, PEDESTRIAN_BRAKE, PEDESTRIAN_TOP_SPEED,
@@ -141,12 +142,20 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
   function setTrack(actorId: string, updater: (track: WaypointTrack) => WaypointTrack) {
     const { scenario } = get();
     if (actorId === 'ego') {
-      set({ scenario: { ...scenario, egoTrack: updater(scenario.egoTrack) } });
+      const updated = updater(scenario.egoTrack);
+      const { accel, brake, topSpeed } = scenario.egoStats;
+      set({ scenario: { ...scenario, egoTrack: createSpeedProfile(updated, accel, brake, topSpeed) } });
     } else {
       set({
         scenario: {
           ...scenario,
-          tracks: scenario.tracks.map(t => t.actorId === actorId ? updater(t) : t),
+          tracks: scenario.tracks.map(t => {
+            if (t.actorId !== actorId) return t;
+            const updated = updater(t);
+            const actor = scenario.actors.find(a => a.id === actorId);
+            if (!actor) return updated;
+            return createSpeedProfile(updated, actor.accel, actor.brake, actor.topSpeed);
+          }),
         },
       });
     }
@@ -282,7 +291,7 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
       set({
         scenario: {
           ...scenario,
-          egoTrack: { actorId: 'ego', waypoints: [{ id: uid(), time: 0, position: [0, 0, 0], targetSpeed: EGO_TOP_SPEED }] },
+          egoTrack: { actorId: 'ego', waypoints: [{ id: uid(), time: 0, position: [0, 0, 0], targetSpeed: EGO_TOP_SPEED / 2 }], length: 0 },
         },
       });
     },
@@ -313,7 +322,7 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
         brake: defaults.brake,
         topSpeed: defaults.topSpeed,
       };
-      const track: WaypointTrack = { actorId: id, waypoints: [{ id: uid(), time: 0, position: [0, 0, 0], targetSpeed: defaults.topSpeed }] };
+      const track: WaypointTrack = { actorId: id, waypoints: [{ id: uid(), time: 0, position: [0, 0, 0], targetSpeed: defaults.topSpeed / 2 }], length: 0 };
       set({
         scenario: {
           ...scenario,
@@ -370,7 +379,7 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
       setTrack(actorId, track => {
         const wps = track.waypoints;
         if (isEvenlyDistributed(wps, dur)) {
-          const newWps = [...wps, { id, time: dur, position, targetSpeed: EGO_TOP_SPEED }];
+          const newWps = [...wps, { id, time: dur, position, targetSpeed: EGO_TOP_SPEED / 2 }];
           const n = newWps.length;
           return {
             ...track,
@@ -387,7 +396,7 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
           const newTime = Math.min(dur, lastTime + avgGap);
           return {
             ...track,
-            waypoints: sortByTime([...wps, { id, time: newTime, position, targetSpeed: EGO_TOP_SPEED }]),
+            waypoints: sortByTime([...wps, { id, time: newTime, position, targetSpeed: EGO_TOP_SPEED / 2 }]),
           };
         }
       });

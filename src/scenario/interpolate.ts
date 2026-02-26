@@ -108,8 +108,9 @@ export function createSpeedProfile(track: WaypointTrack, accel: number, brake: n
   if (wps.length < 2) return track;
 
   _curve.points = wps.map(w => new THREE.Vector3(w.position[0], w.position[1], w.position[2]));
+  _curve.updateArcLengths();
 
-  const wp_distances = _curve.getLengths(wps.length - 1);
+  const { wp_distances, total_length } = calculate_waypoint_distances(_curve, wps);
 
   const forward_pass = [wps[0].targetSpeed];
 
@@ -150,6 +151,7 @@ export function createSpeedProfile(track: WaypointTrack, accel: number, brake: n
 
   return {
     ...track,
-    waypoints: corrected_waypoints
+    waypoints: corrected_waypoints,
+    length: total_length
   }
 }
