@@ -6,7 +6,6 @@ import SelectionGizmo from './visuals/SelectionGizmo';
 import WaypointMarker from './visuals/WaypointMarker';
 import TrackLine from './visuals/TrackLine';
 import ActorMesh from './visuals/ActorMesh';
-import { evaluateTrack } from './scenario/interpolate';
 import { useSceneMouseControls } from './hooks/useSceneMouseControls';
 import { useScenarioMouseControls } from './hooks/useScenarioMouseControls';
 import { useEditorStore, selectionActorId, selectionTileId } from './store/useEditorStore';
@@ -205,7 +204,7 @@ export default function Scene() {
         />
       ))}
 
-      {scenario.actors.map(actor => {
+      {/* {scenario.actors.map(actor => {
         const track = scenario.tracks.find(t => t.actorId === actor.id);
         if (!track) return null;
         const pose = evaluateTrack(track, scenarioTime);
@@ -220,8 +219,8 @@ export default function Scene() {
             pose={pose}
             onSelect={handleActorSelect}
           />
-        );
-      })}
+        ); */}
+      {/* })} */}
     </>
   );
 }
