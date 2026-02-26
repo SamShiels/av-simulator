@@ -1,50 +1,14 @@
-import { useRef, useEffect } from 'react';
-import { useFrame } from '@react-three/fiber';
 import Car from './Car';
-import { advance_actor } from './scenario/interpolate';
-import type { DrivingZone } from './scenario/interpolate';
-import { EGO_ACCEL, EGO_BRAKE } from './constants';
-import type { WaypointTrack, ScenarioPose } from './scenario/types';
+import { useActorAdvance } from './hooks/useActorAdvance';
+import type { WaypointTrack, ActorStats } from './scenario/types';
 
 interface Props {
   track: WaypointTrack;
+  stats: ActorStats;
   rendering: boolean;
 }
 
-export default function EgoActor({ track, rendering }: Props) {
-  const poseRef     = useRef<ScenarioPose | null>(null);
-  const speedRef    = useRef(0);
-  const progressRef = useRef(0);
-  const zoneRef     = useRef<DrivingZone | null>(null);
-
-  // Reset physics state when the track changes
-  useEffect(() => {
-    speedRef.current    = 0;
-    progressRef.current = 0;
-    poseRef.current     = null;
-    zoneRef.current     = null;
-  }, [track]);
-
-  useFrame((_, delta) => {
-    const result = advance_actor(
-      track,
-      speedRef.current,
-      progressRef.current,
-      delta,
-      EGO_ACCEL,
-      EGO_BRAKE,
-    );
-    if (!result) return;
-
-    if (result.zone !== zoneRef.current) {
-      console.log(`[EgoActor] ${result.zone} — speed: ${result.speed.toFixed(2)} m/s`);
-      zoneRef.current = result.zone;
-    }
-
-    poseRef.current     = result.pose;
-    speedRef.current    = result.speed;
-    progressRef.current = result.progress;
-  });
-
+export default function EgoActor({ track, stats, rendering }: Props) {
+  const poseRef = useActorAdvance(track, stats.accel, stats.brake, stats.topSpeed, 'EgoActor');
   return <Car poseRef={poseRef} rendering={rendering} />;
 }

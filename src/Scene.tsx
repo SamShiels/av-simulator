@@ -6,6 +6,7 @@ import SelectionGizmo from './visuals/SelectionGizmo';
 import WaypointMarker from './visuals/WaypointMarker';
 import TrackLine from './visuals/TrackLine';
 import ActorMesh from './visuals/ActorMesh';
+import ScenarioActor from './ScenarioActor';
 import { useSceneMouseControls } from './hooks/useSceneMouseControls';
 import { useScenarioMouseControls } from './hooks/useScenarioMouseControls';
 import { useEditorStore, selectionActorId, selectionTileId } from './store/useEditorStore';
@@ -121,7 +122,7 @@ export default function Scene() {
       <ambientLight intensity={0.6} />
       <directionalLight position={[10, 20, 10]} intensity={1} />
 
-      <EgoActor track={scenario.egoTrack} rendering={rendering} />
+      <EgoActor track={scenario.egoTrack} stats={scenario.egoStats} rendering={rendering} />
 
       {!rendering && (
         <>
@@ -204,23 +205,18 @@ export default function Scene() {
         />
       ))}
 
-      {/* {scenario.actors.map(actor => {
+      {scenario.actors.map(actor => {
         const track = scenario.tracks.find(t => t.actorId === actor.id);
         if (!track) return null;
-        const pose = evaluateTrack(track, scenarioTime);
-        if (!pose) return null;
-        function handleActorSelect() {
-          selectActor(actor.id);
-        }
         return (
-          <ActorMesh
+          <ScenarioActor
             key={actor.id}
             actor={actor}
-            pose={pose}
-            onSelect={handleActorSelect}
+            track={track}
+            onSelect={() => selectActor(actor.id)}
           />
-        ); */}
-      {/* })} */}
+        );
+      })}
     </>
   );
 }

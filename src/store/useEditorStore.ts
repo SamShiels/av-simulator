@@ -1,8 +1,17 @@
 import { create } from 'zustand';
 import type { RoadType, GizmoMode, RenderPass, Block, Selection } from '../App';
-import type { Scenario, Waypoint, WaypointTrack, Actor, ActorKind } from '../scenario/types';
+import type { Scenario, Waypoint, WaypointTrack, Actor, ActorKind, ActorStats } from '../scenario/types';
 import { defaultScenario, nextActorColor } from '../scenario/defaults';
-import { EGO_TOP_SPEED } from '../constants';
+import {
+  EGO_ACCEL, EGO_BRAKE, EGO_TOP_SPEED,
+  PEDESTRIAN_ACCEL, PEDESTRIAN_BRAKE, PEDESTRIAN_TOP_SPEED,
+} from '../constants';
+
+const KIND_DEFAULTS: Record<ActorKind, ActorStats> = {
+  vehicle:    { accel: EGO_ACCEL,        brake: EGO_BRAKE,        topSpeed: EGO_TOP_SPEED },
+  pedestrian: { accel: PEDESTRIAN_ACCEL, brake: PEDESTRIAN_BRAKE, topSpeed: PEDESTRIAN_TOP_SPEED },
+  stroller:   { accel: PEDESTRIAN_ACCEL, brake: PEDESTRIAN_BRAKE, topSpeed: PEDESTRIAN_TOP_SPEED },
+};
 
 // ── Private helpers ──────────────────────────────────────────────────────────
 
@@ -83,6 +92,8 @@ interface EditorActions {
   // Actors
   addActor: (kind: ActorKind) => void;
   removeActor: (id: string) => void;
+  setActorStats: (id: string, stats: Partial<ActorStats>) => void;
+  setEgoStats: (stats: Partial<ActorStats>) => void;
 
   // Waypoints
   addWaypoint: (actorId: string, time: number, pos: [number, number, number]) => void;
@@ -222,13 +233,17 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
         stroller: 'Stroller',
         vehicle: 'Vehicle',
       };
+      const defaults = KIND_DEFAULTS[kind];
       const actor: Actor = {
         id,
         kind,
         label: `${kindLabels[kind]} ${count + 1}`,
         color: nextActorColor(count),
+        accel: defaults.accel,
+        brake: defaults.brake,
+        topSpeed: defaults.topSpeed,
       };
-      const track: WaypointTrack = { actorId: id, waypoints: [{ id: uid(), time: 0, position: [0, 0, 0], targetSpeed: EGO_TOP_SPEED }] };
+      const track: WaypointTrack = { actorId: id, waypoints: [{ id: uid(), time: 0, position: [0, 0, 0], targetSpeed: defaults.topSpeed }] };
       set({
         scenario: {
           ...scenario,
@@ -259,6 +274,21 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
         selectedWaypointActorId: null,
         waypointPopupPos: null,
       });
+    },
+
+    setActorStats: (id, stats) => {
+      const { scenario } = get();
+      set({
+        scenario: {
+          ...scenario,
+          actors: scenario.actors.map(a => a.id === id ? { ...a, ...stats } : a),
+        },
+      });
+    },
+
+    setEgoStats: (stats) => {
+      const { scenario } = get();
+      set({ scenario: { ...scenario, egoStats: { ...scenario.egoStats, ...stats } } });
     },
 
     // ── Waypoint actions ───────────────────────────────────────────────────

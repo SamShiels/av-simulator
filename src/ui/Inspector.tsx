@@ -1,16 +1,14 @@
 import type { RoadType } from '../App';
-import type { ActorKind } from '../scenario/types';
+import type { ActorKind, ActorStats } from '../scenario/types';
 
 // ── Inspected object types ──────────────────────────────────────────────────
-// Each variant carries all the data the inspector needs to display.
-// Add new variants here as new object kinds are introduced.
 
 export interface InspectedTile {
   kind: 'tile';
   id: string;
-  position: [number, number, number]; // grid-snapped, y=0
+  position: [number, number, number];
   roadType: RoadType;
-  rotation: number; // 0–3, each step = 90°
+  rotation: number;
 }
 
 export interface InspectedActor {
@@ -19,9 +17,21 @@ export interface InspectedActor {
   label: string;
   actorKind: ActorKind;
   color: string;
+  accel: number;
+  brake: number;
+  topSpeed: number;
 }
 
-export type InspectedObject = InspectedTile | InspectedActor;
+export interface InspectedEgo {
+  kind: 'ego';
+  accel: number;
+  brake: number;
+  topSpeed: number;
+}
+
+export type InspectedObject = InspectedTile | InspectedActor | InspectedEgo;
+
+type StatField = keyof ActorStats;
 
 // ── Sub-components ──────────────────────────────────────────────────────────
 
@@ -42,6 +52,35 @@ function Field({ label, value }: { label: string; value: string | number }) {
   );
 }
 
+function EditableField({ label, value, unit, min, step, onChange }: {
+  label: string;
+  value: number;
+  unit?: string;
+  min?: number;
+  step?: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <div className="flex justify-between items-center py-0.5">
+      <span className="text-[11px] text-white/40">{label}</span>
+      <div className="flex items-center gap-1">
+        <input
+          type="number"
+          value={value}
+          min={min ?? 0}
+          step={step ?? 0.1}
+          onChange={e => {
+            const v = parseFloat(e.target.value);
+            if (!isNaN(v) && v >= (min ?? 0)) onChange(v);
+          }}
+          className="w-14 text-[11px] text-white/80 font-mono bg-white/10 border border-white/10 rounded px-1 py-0.5 text-right"
+        />
+        {unit && <span className="text-[10px] text-white/30">{unit}</span>}
+      </div>
+    </div>
+  );
+}
+
 function DeleteButton({ onDelete }: { onDelete: () => void }) {
   return (
     <button
@@ -50,6 +89,21 @@ function DeleteButton({ onDelete }: { onDelete: () => void }) {
     >
       Delete
     </button>
+  );
+}
+
+function StatsSection({ accel, brake, topSpeed, onChange }: {
+  accel: number;
+  brake: number;
+  topSpeed: number;
+  onChange: (field: StatField, value: number) => void;
+}) {
+  return (
+    <div className="mt-2 pt-2 border-t border-white/10">
+      <EditableField label="Accel"     value={accel}    unit="m/s²" min={0.1} step={0.1} onChange={v => onChange('accel', v)} />
+      <EditableField label="Brake"     value={brake}    unit="m/s²" min={0.1} step={0.1} onChange={v => onChange('brake', v)} />
+      <EditableField label="Top Speed" value={topSpeed} unit="m/s"  min={0}   step={0.5} onChange={v => onChange('topSpeed', v)} />
+    </div>
   );
 }
 
@@ -75,7 +129,10 @@ function TileInspector({ obj, onDelete }: { obj: InspectedTile; onDelete: () => 
   );
 }
 
-function ActorInspector({ obj }: { obj: InspectedActor }) {
+function ActorInspector({ obj, onStatChange }: {
+  obj: InspectedActor;
+  onStatChange: (field: StatField, value: number) => void;
+}) {
   const kindLabels: Record<ActorKind, string> = {
     pedestrian: 'Pedestrian',
     stroller: 'Stroller',
@@ -94,6 +151,19 @@ function ActorInspector({ obj }: { obj: InspectedActor }) {
           <span className="text-[11px] text-white/80 font-mono">{obj.color}</span>
         </span>
       </div>
+      <StatsSection accel={obj.accel} brake={obj.brake} topSpeed={obj.topSpeed} onChange={onStatChange} />
+    </div>
+  );
+}
+
+function EgoInspector({ obj, onStatChange }: {
+  obj: InspectedEgo;
+  onStatChange: (field: StatField, value: number) => void;
+}) {
+  return (
+    <div>
+      <KindBadge label="Ego Vehicle" />
+      <StatsSection accel={obj.accel} brake={obj.brake} topSpeed={obj.topSpeed} onChange={onStatChange} />
     </div>
   );
 }
@@ -103,9 +173,10 @@ function ActorInspector({ obj }: { obj: InspectedActor }) {
 interface Props {
   object: InspectedObject | null;
   onDelete: () => void;
+  onStatChange: (field: StatField, value: number) => void;
 }
 
-export default function Inspector({ object, onDelete }: Props) {
+export default function Inspector({ object, onDelete, onStatChange }: Props) {
   if (!object) {
     return <p className="text-xs text-white/40 italic">Nothing selected</p>;
   }
@@ -115,7 +186,11 @@ export default function Inspector({ object, onDelete }: Props) {
   }
 
   if (object.kind === 'actor') {
-    return <ActorInspector obj={object} />;
+    return <ActorInspector obj={object} onStatChange={onStatChange} />;
+  }
+
+  if (object.kind === 'ego') {
+    return <EgoInspector obj={object} onStatChange={onStatChange} />;
   }
 
   return null;

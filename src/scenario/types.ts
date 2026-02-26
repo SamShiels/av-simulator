@@ -1,5 +1,11 @@
 export type ActorKind = 'pedestrian' | 'stroller' | 'vehicle';
 
+export interface ActorStats {
+  accel: number;    // m/s²
+  brake: number;    // m/s²
+  topSpeed: number; // m/s
+}
+
 export interface Waypoint {
   id: string;
   time: number; // seconds along the timeline
@@ -17,11 +23,15 @@ export interface Actor {
   kind: ActorKind;
   label: string;
   color: string; // hex color for markers and timeline lane
+  accel: number;
+  brake: number;
+  topSpeed: number;
 }
 
 export interface Scenario {
   duration: number; // total seconds
   egoTrack: WaypointTrack; // the car's scripted path
+  egoStats: ActorStats;
   actors: Actor[]; // non-ego actors
   tracks: WaypointTrack[]; // one track per actor (matched by actorId)
 }

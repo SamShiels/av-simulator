@@ -15,7 +15,7 @@ export interface AdvanceResult {
   zone: DrivingZone;
 }
 
-export function advance_actor(track: WaypointTrack, current_speed: number, current_progress: number, delta: number, acceleration: number, brake: number): AdvanceResult | null {
+export function advance_actor(track: WaypointTrack, current_speed: number, current_progress: number, delta: number, acceleration: number, brake: number, top_speed: number): AdvanceResult | null {
   const wps = track.waypoints;
   const segments = wps.length;
 
@@ -40,16 +40,17 @@ export function advance_actor(track: WaypointTrack, current_speed: number, curre
   const next_waypoint = wps[i + 1];
 
   const get_new_speed = (): number => {
-    if (current_speed < next_waypoint.targetSpeed) {
+    const target = Math.min(next_waypoint.targetSpeed, top_speed);
+    if (current_speed < target) {
       // Speed up!
-      return current_speed + (acceleration * delta);
-    } else if (current_speed > next_waypoint.targetSpeed) {
+      return Math.min(current_speed + (acceleration * delta), target);
+    } else if (current_speed > target) {
       // Slow down!
-      const braking_distance = (Math.pow(current_speed, 2) - Math.pow(next_waypoint.targetSpeed, 2)) / (brake * 2);
+      const braking_distance = (Math.pow(current_speed, 2) - Math.pow(target, 2)) / (brake * 2);
       const distance_to_next_waypoint = wp_distances[i + 1] - current_progress;
-      
+
       if (distance_to_next_waypoint < braking_distance) {
-        return Math.max(current_speed - (brake * delta), next_waypoint.targetSpeed);
+        return Math.max(current_speed - (brake * delta), target);
       }
     }
 
@@ -57,7 +58,8 @@ export function advance_actor(track: WaypointTrack, current_speed: number, curre
   }
 
   const updated_speed = get_new_speed();
-  const updated_progress = current_progress + updated_speed * delta;
+  const average_speed_this_frame = (current_speed + updated_speed) / 2;
+  const updated_progress = current_progress + (average_speed_this_frame * delta);
 
   const progress_percentage = updated_progress / total_length;
 
