@@ -82,7 +82,7 @@ export function advance_actor(track: WaypointTrack, current_speed: number, curre
   const average_speed_this_frame = (current_speed + updated_speed) / 2;
   const updated_progress = current_progress + (average_speed_this_frame * delta);
 
-  const progress_percentage = updated_progress / total_length;
+  const progress_percentage = Math.min(updated_progress / total_length, 1.0);
 
   _curve.getPointAt(progress_percentage, _pos);
   _curve.getTangentAt(progress_percentage, _tangent);
@@ -104,11 +104,13 @@ export function advance_actor(track: WaypointTrack, current_speed: number, curre
 
 export function sample_pose_at_progress(track: WaypointTrack, progress: number): ScenarioPose | null {
   const wps = track.waypoints;
+  
   if (wps.length === 0) return null;
   if (wps.length === 1) {
     const [x, y, z] = wps[0].position;
     return { position: [x, y, z], yaw: 0 };
   }
+
   _curve.points = wps.map(w => new THREE.Vector3(w.position[0], w.position[1], w.position[2]));
   _curve.updateArcLengths();
   const { total_length } = calculate_waypoint_distances(_curve, wps);
@@ -116,6 +118,7 @@ export function sample_pose_at_progress(track: WaypointTrack, progress: number):
     const [x, y, z] = wps[0].position;
     return { position: [x, y, z], yaw: 0 };
   }
+
   const t = Math.min(1, Math.max(0, progress / total_length));
   _curve.getPointAt(t, _pos);
   _curve.getTangentAt(t, _tangent);

@@ -91,9 +91,9 @@ function Lane({
 
 export default function Timeline() {
   const scenario = useEditorStore(s => s.scenario);
-  const scenarioTime = useEditorStore(s => s.scenarioTime);
+  const scenarioProgress = useEditorStore(s => s.scenarioProgress);
   const selection = useEditorStore(s => s.selection);
-  const setScenarioTime = useEditorStore(s => s.setScenarioTime);
+  const setScenarioProgress = useEditorStore(s => s.setScenarioProgress);
   const selectActor = useEditorStore(s => s.selectActor);
   const selectWaypoint = useEditorStore(s => s.selectWaypoint);
   const scrubRef = useRef<HTMLDivElement>(null);
@@ -103,7 +103,7 @@ export default function Timeline() {
   const trackLength = scenario.egoTrack.length;
 
   function scrubToFrac(frac: number) {
-    setScenarioTime(frac * trackLength);
+    setScenarioProgress(frac * trackLength);
   }
 
   function startScrub(e: React.PointerEvent) {
@@ -116,7 +116,10 @@ export default function Timeline() {
       scrubToFrac(clamp((ev.clientX - rect.left) / rect.width, 0, 1));
     }
 
-    function handleMove(ev: PointerEvent) { scrub(ev); }
+    function handleMove(ev: PointerEvent) { 
+      scrub(ev); 
+    }
+
     function handleUp() {
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleUp);
@@ -126,7 +129,7 @@ export default function Timeline() {
     window.addEventListener('pointerup', handleUp);
   }
 
-  const playheadPct = trackLength > 0 ? clamp(scenarioTime / trackLength, 0, 1) * 100 : 0;
+  const playheadPct = trackLength > 0 ? clamp(scenarioProgress / trackLength, 0, 1) * 100 : 0;
 
   return (
     <div
@@ -183,7 +186,7 @@ export default function Timeline() {
 
       {/* Footer */}
       <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-white/50 font-mono">
-        <span>{scenarioTime.toFixed(1)} m</span>
+        <span>{scenarioProgress.toFixed(1)} m</span>
         <span>/</span>
         <span>{trackLength.toFixed(1)} m</span>
       </div>

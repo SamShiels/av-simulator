@@ -71,7 +71,7 @@ interface EditorState {
 
   // Scenario
   scenario: Scenario;
-  scenarioTime: number;
+  scenarioProgress: number;
 
   // Playback / UI
   playing: boolean;
@@ -125,7 +125,7 @@ interface EditorActions {
 
   // Playback
   togglePlaying: () => void;
-  setScenarioTime: (t: number) => void;
+  setScenarioProgress: (t: number) => void;
   setRenderPass: (pass: RenderPass) => void;
   startRender: () => void;
 
@@ -178,7 +178,7 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
     waypointPopupPos: null,
 
     scenario: defaultScenario(),
-    scenarioTime: 0,
+    scenarioProgress: 0,
 
     playing: false,
     renderPass: 'idle',
@@ -463,9 +463,9 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
 
     // ── Playback actions ───────────────────────────────────────────────────
     togglePlaying: () => set(s => ({ playing: !s.playing })),
-    setScenarioTime: (t) => set({ scenarioTime: t }),
+    setScenarioProgress: (t) => set({ scenarioProgress: t }),
     setRenderPass: (pass) => set({ renderPass: pass }),
-    startRender: () => set({ scenarioTime: 0, playing: false, renderPass: 'rgb' }),
+    startRender: () => set({ scenarioProgress: 0, playing: false, renderPass: 'rgb' }),
 
     // ── UI actions ─────────────────────────────────────────────────────────
     setGizmoMode: (mode) => set({ gizmoMode: mode }),

@@ -11,6 +11,7 @@ import ScenarioActor from './ScenarioActor';
 import { useSceneMouseControls } from './hooks/useSceneMouseControls';
 import { useScenarioMouseControls } from './hooks/useScenarioMouseControls';
 import { useEditorStore, selectionActorId, selectionTileId, selectionSceneryId } from './store/useEditorStore';
+import { useCanvasRecorder } from './hooks/useCanvasRecorder';
 
 const GHOST_WP_POLE_HEIGHT = 0.6;
 const GHOST_WP_SPHERE_RADIUS = 0.18;
@@ -23,7 +24,7 @@ export default function Scene() {
   const selection = useEditorStore(s => s.selection);
   const gizmoMode = useEditorStore(s => s.gizmoMode);
   const scenario = useEditorStore(s => s.scenario);
-  const scenarioTime = useEditorStore(s => s.scenarioTime);
+  const scenarioProgress = useEditorStore(s => s.scenarioProgress);
   const playing = useEditorStore(s => s.playing);
   const renderPass = useEditorStore(s => s.renderPass);
 
@@ -40,7 +41,7 @@ export default function Scene() {
   const rotateBlock = useEditorStore(s => s.rotateBlock);
   const addWaypoint = useEditorStore(s => s.addWaypoint);
   const moveWaypoint = useEditorStore(s => s.moveWaypoint);
-  const setScenarioTime = useEditorStore(s => s.setScenarioTime);
+  const setScenarioProgress = useEditorStore(s => s.setScenarioProgress);
 
   const selectActor = useEditorStore(s => s.selectActor);
   const selectWaypoint = useEditorStore(s => s.selectWaypoint);
@@ -61,6 +62,8 @@ export default function Scene() {
   const selectedWaypointId = useEditorStore(s => s.selectedWaypointId);
 
   const { gl, camera } = useThree();
+
+  useCanvasRecorder(renderPass);
   const [cursorPos, setCursorPos] = useState<[number, number, number] | null>(null);
 
   const { ghost, isDraggingGizmoRef } = useSceneMouseControls({
@@ -86,10 +89,10 @@ export default function Scene() {
     gl,
     camera,
     enabled: drawingPath,
-    scenarioTime,
+    scenarioProgress,
     selectedActorId,
     onAddWaypoint: addWaypoint,
-    onScenarioTimeChange: setScenarioTime,
+    onScenarioProgressChange: setScenarioProgress,
     onCursorMove: setCursorPos,
   });
 
@@ -98,21 +101,21 @@ export default function Scene() {
   }, [camera]);
 
   // ── Playback loop ─────────────────────────────────────────────────────────
-  // scenarioTime is now distance (metres). The ego's useActorAdvance drives it
+  // scenarioProgress is now distance (metres). The ego's useActorAdvance drives it
   // forward during playback; Scene just handles looping.
   const playingRef = useRef(playing);
-  const scenarioTimeRef = useRef(scenarioTime);
+  const scenarioTimeRef = useRef(scenarioProgress);
   const egoTrackLengthRef = useRef(scenario.egoTrack.length);
 
   playingRef.current = playing;
-  scenarioTimeRef.current = scenarioTime;
+  scenarioTimeRef.current = scenarioProgress;
   egoTrackLengthRef.current = scenario.egoTrack.length;
 
   useFrame(() => {
     if (!playingRef.current) return;
     const length = egoTrackLengthRef.current;
     if (length > 0 && scenarioTimeRef.current >= length) {
-      setScenarioTime(0);
+      setScenarioProgress(0);
     }
   });
 
@@ -190,10 +193,8 @@ export default function Scene() {
                     waypoint={wp}
                     color={color}
                     selected={selectedWaypointId === wp.id}
-                    onSelect={(screenX, screenY) => {
-                      selectWaypoint(selectedTrack.actorId, wp.id);
-                      setWaypointPopupPos({ x: screenX, y: screenY });
-                    }}
+                    onPress={() => selectWaypoint(selectedTrack.actorId, wp.id)}
+                    onSelect={(screenX, screenY) => setWaypointPopupPos({ x: screenX, y: screenY })}
                     onMove={(pos) => moveWaypoint(selectedTrack.actorId, wp.id, pos)}
                   />
                 ))}

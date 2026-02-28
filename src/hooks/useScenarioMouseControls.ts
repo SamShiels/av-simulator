@@ -6,19 +6,19 @@ interface Options {
   gl: THREE.WebGLRenderer;
   camera: THREE.OrthographicCamera | THREE.PerspectiveCamera;
   enabled: boolean;
-  scenarioTime: number;
+  scenarioProgress: number;
   selectedActorId: string;
   onAddWaypoint: (actorId: string, time: number, position: [number, number, number]) => void;
-  onScenarioTimeChange: (t: number) => void;
+  onScenarioProgressChange: (t: number) => void;
   onCursorMove?: (pos: [number, number, number] | null) => void;
 }
 
 export function useScenarioMouseControls({
-  gl, camera, enabled, scenarioTime, selectedActorId,
+  gl, camera, enabled, scenarioProgress, selectedActorId,
   onAddWaypoint, onCursorMove
 }: Options) {
-  const state = useRef({ scenarioTime, selectedActorId });
-  state.current = { scenarioTime, selectedActorId };
+  const state = useRef({ scenarioProgress, selectedActorId });
+  state.current = { scenarioProgress, selectedActorId };
 
   useViewportControls({
     gl,
@@ -27,7 +27,7 @@ export function useScenarioMouseControls({
     onGroundClick: (pos) => {
       onAddWaypoint(
         state.current.selectedActorId,
-        state.current.scenarioTime,
+        state.current.scenarioProgress,
         [pos.x, 0, pos.z],
       );
     },

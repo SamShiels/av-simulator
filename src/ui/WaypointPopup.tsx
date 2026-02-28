@@ -19,7 +19,12 @@ export default function WaypointPopup() {
 
     function handlePointerDown(e: PointerEvent) {
       if (popupRef.current && popupRef.current.contains(e.target as Node)) return;
+      document.addEventListener('click', swallowClick, { capture: true, once: true });
       dismissWaypointPopup();
+    }
+
+    function swallowClick(e: MouseEvent) {
+      e.stopImmediatePropagation();
     }
 
     document.addEventListener('pointerdown', handlePointerDown);

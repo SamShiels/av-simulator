@@ -15,11 +15,12 @@ interface Props {
   waypoint: Waypoint;
   color: string;
   selected: boolean;
+  onPress: () => void;
   onSelect: (screenX: number, screenY: number) => void;
   onMove: (pos: [number, number, number]) => void;
 }
 
-export default function WaypointMarker({ waypoint, color, selected, onSelect, onMove }: Props) {
+export default function WaypointMarker({ waypoint, color, selected, onPress, onSelect, onMove }: Props) {
   const { gl, camera } = useThree();
   const [hovered, setHovered] = useState(false);
   const posRef = useRef<[number, number, number]>(waypoint.position);
@@ -50,7 +51,7 @@ export default function WaypointMarker({ waypoint, color, selected, onSelect, on
       (ev) => ev.stopImmediatePropagation(),
       { capture: true, once: true },
     );
-    onSelect(e.nativeEvent.clientX, e.nativeEvent.clientY);
+    onPress();
 
     let moved = false;
 
@@ -61,12 +62,12 @@ export default function WaypointMarker({ waypoint, color, selected, onSelect, on
       onMove(p);
     }
 
-    function handleUp() {
+    function handleUp(ev: PointerEvent) {
       document.body.style.cursor = hovered ? 'grab' : '';
       window.removeEventListener('pointermove', handleMove);
       window.removeEventListener('pointerup', handleUp);
       if (!moved) {
-        // Pure click, selection already handled above
+        onSelect(ev.clientX, ev.clientY);
       }
     }
 

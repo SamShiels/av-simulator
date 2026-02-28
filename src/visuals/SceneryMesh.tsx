@@ -18,6 +18,12 @@ const MTL_PATH: Record<SceneryType, string> = {
   'building-c': '/assets/city/building-type-c.mtl',
 };
 
+function applyGhost(mat: THREE.Material): THREE.Material {
+  const g = mat.clone();
+  g.transparent = true;
+  g.opacity = 0.5;
+  return g;
+}
 
 export function SceneryModel({
   sceneryType,
@@ -29,24 +35,21 @@ export function SceneryModel({
   ghost: boolean;
 }) {
   const materials = useLoader(MTLLoader, MTL_PATH[sceneryType]);
-  const obj = useLoader(OBJLoader, OBJ_PATH[sceneryType], loader => {
-    materials.preload();
-    loader.setMaterials(materials);
-  });
+  const obj = useLoader(OBJLoader, OBJ_PATH[sceneryType]);
 
   const clone = useMemo(() => {
-    const c = obj.clone();
-    if (ghost) {
-      c.traverse(child => {
-        if (!(child as THREE.Mesh).isMesh) return;
-        const mat = ((child as THREE.Mesh).material as THREE.Material).clone();
-        mat.transparent = true;
-        mat.opacity = 0.5;
-        (child as THREE.Mesh).material = mat;
-      });
-    }
+    materials.preload();
+    const c = obj.clone(true);
+    c.traverse(child => {
+      const mesh = child as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const matName = (mesh.material as THREE.Material)?.name;
+      const freshMat = matName ? materials.create(matName) : undefined;
+      const baseMat = freshMat ?? (mesh.material as THREE.Material);
+      mesh.material = ghost ? applyGhost(baseMat) : baseMat;
+    });
     return c;
-  }, [obj, ghost]);
+  }, [obj, materials, ghost]);
 
   return (
     <primitive

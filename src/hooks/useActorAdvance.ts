@@ -30,7 +30,7 @@ export function useActorAdvance(
     const { playing, renderPass } = store;
     const rendering = renderPass !== 'idle';
     const active = playing || rendering;
-    const scenarioProgress = store.scenarioTime; // distance in metres
+    const scenarioProgress = store.scenarioProgress; // distance in metres
 
     if (active) {
       // Detect loop/reset: scenarioProgress jumped back to near 0
@@ -53,7 +53,7 @@ export function useActorAdvance(
       progressRef.current = result.progress;
 
       if (isEgo) {
-        store.setScenarioTime(result.progress);
+        store.setScenarioProgress(result.progress);
         if (rendering && result.progress >= track.length) {
           store.setRenderPass('idle');
         }
