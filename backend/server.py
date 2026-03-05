@@ -1,8 +1,11 @@
+import io
 import json
 import os
 import urllib.parse
 import urllib.request
 import uuid
+
+import av
 
 import requests
 import websocket
@@ -22,6 +25,12 @@ app.add_middleware(
     allow_methods=["POST"],
     allow_headers=["*"],
 )
+
+
+def get_frame_count(video_bytes: bytes) -> int:
+    with av.open(io.BytesIO(video_bytes)) as container:
+        stream = container.streams.video[0]
+        return stream.frames
 
 
 def upload_to_comfy(file_bytes: bytes, filename: str) -> str:
@@ -59,6 +68,7 @@ def wait_for_completion(prompt_id: str) -> None:
 
 def fetch_output_video(prompt_id: str) -> bytes:
     history = requests.get(f"http://{COMFY_HOST}/history/{prompt_id}").json()
+    print(f"History outputs: {json.dumps(history[prompt_id]['outputs'], indent=2)}")
     output_key = list(history[prompt_id]["outputs"].keys())[0]
     info = history[prompt_id]["outputs"][output_key]["gifs"][0]
     params = urllib.parse.urlencode({
@@ -66,28 +76,32 @@ def fetch_output_video(prompt_id: str) -> bytes:
         "subfolder": info["subfolder"],
         "type": info["type"],
     })
-    return urllib.request.urlopen(f"http://{COMFY_HOST}/view?{params}").read()
+    url = f"http://{COMFY_HOST}/view?{params}"
+    print(f"Fetching video from: {url}")
+    data = urllib.request.urlopen(url).read()
+    print(f"Fetched {len(data)} bytes")
+    return data
 
 
 @app.post("/render")
 def render(
-    rgb: UploadFile = File(...),
     depth: UploadFile = File(...),
     prompt: str = Form(default="Photorealistic dashcam footage, driving down a road, heavy rain, glowing streetlights reflecting on wet asphalt, cinematic lighting, 8k resolution."),
 ):
-    rgb_name = upload_to_comfy(rgb.file.read(), rgb.filename or "rgb.mp4")
-    depth_name = upload_to_comfy(depth.file.read(), depth.filename or "depth.mp4")
+    depth_bytes = depth.file.read()
+    length = get_frame_count(depth_bytes)
+    depth_name = upload_to_comfy(depth_bytes, depth.filename or "depth.mp4")
 
     with open(WORKFLOW_PATH) as f:
         workflow = json.load(f)
 
-    workflow["1"]["inputs"]["video"] = rgb_name
     workflow["2"]["inputs"]["video"] = depth_name
     workflow["5"]["inputs"]["text"] = prompt
+    workflow["8"]["inputs"]["length"] = length
 
     prompt_id = queue_prompt(workflow)
     print(f"Job queued: {prompt_id}")
     wait_for_completion(prompt_id)
 
-    video_bytes = fetch_output_video(prompt_id)
-    return Response(content=video_bytes, media_type="video/mp4")
+    output_bytes = fetch_output_video(prompt_id)
+    return Response(content=output_bytes, media_type="video/mp4")

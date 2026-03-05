@@ -8,7 +8,7 @@
       "frame_load_cap": 0,
       "skip_first_frames": 0,
       "select_every_nth": 1,
-      "format": "AnimateDiff"
+      "format": "Wan"
     },
     "class_type": "VHS_LoadVideo",
     "_meta": {
@@ -24,7 +24,7 @@
       "frame_load_cap": 0,
       "skip_first_frames": 0,
       "select_every_nth": 1,
-      "format": "AnimateDiff"
+      "format": "Wan"
     },
     "class_type": "VHS_LoadVideo",
     "_meta": {
@@ -53,7 +53,7 @@
   },
   "5": {
     "inputs": {
-      "text": "Photorealistic dashcam footage, driving down a road, heavy rain, glowing streetlights reflecting on wet asphalt, cinematic lighting, 8k resolution.",
+      "text": "Photorealistic dashcam footage, driving down a residential suburban street, modern houses on both sides of the road, green lawns, heavy rain, blue sky, sunny day, 8k resolution.",
       "clip": [
         "4",
         0
@@ -79,7 +79,7 @@
   },
   "7": {
     "inputs": {
-      "unet_name": "Wan2.1/wan2.1_t2v_14B_fp8_e4m3fn.safetensors",
+      "unet_name": "wan2.1-t2v-14b-controlnet-depth-v1.safetensors",
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
@@ -91,7 +91,7 @@
     "inputs": {
       "width": 832,
       "height": 480,
-      "length": 49,
+      "length": 200,
       "batch_size": 1,
       "positive": [
         "5",
@@ -103,10 +103,6 @@
       ],
       "vae": [
         "3",
-        0
-      ],
-      "start_image": [
-        "1",
         0
       ],
       "control_video": [
@@ -126,7 +122,7 @@
       "cfg": 4,
       "sampler_name": "euler",
       "scheduler": "normal",
-      "denoise": 0.7,
+      "denoise": 1,
       "model": [
         "7",
         0

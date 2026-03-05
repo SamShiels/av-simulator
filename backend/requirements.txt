@@ -3,3 +3,4 @@ uvicorn[standard]
 requests
 websocket-client
 python-multipart
+av
