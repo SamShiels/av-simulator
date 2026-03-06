@@ -1,4 +1,5 @@
 import { useEditorStore } from '../store/useEditorStore';
+import SimSettings from './SimSettings';
 
 export default function Toolbar() {
   const gizmoMode = useEditorStore(s => s.gizmoMode);
@@ -82,6 +83,10 @@ export default function Toolbar() {
           <rect x="1" y="5" width="15" height="14" rx="2" />
         </svg>
       </button>
+
+      <div className="w-px bg-white/20 mx-0.5" />
+
+      <SimSettings />
     </div>
   );
 }

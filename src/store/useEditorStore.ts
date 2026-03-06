@@ -79,6 +79,7 @@ interface EditorState {
   playing: boolean;
   renderPass: RenderPass;
   renderStatus: RenderStatus;
+  simulationPrompt: string;
 }
 
 interface EditorActions {
@@ -137,6 +138,7 @@ interface EditorActions {
   // UI
   setGizmoMode: (mode: GizmoMode) => void;
   toggleDrawingPath: () => void;
+  setSimulationPrompt: (prompt: string) => void;
 }
 
 export type EditorStore = EditorState & EditorActions;
@@ -188,6 +190,7 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
     playing: false,
     renderPass: 'idle',
     renderStatus: 'idle',
+    simulationPrompt: 'Photorealistic dashcam footage, driving down a road, heavy rain, glowing streetlights reflecting on wet asphalt, cinematic lighting, 8k resolution.',
 
     // ── Road editor actions ────────────────────────────────────────────────
     selectRoadType: (type) => {
@@ -477,6 +480,7 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
 
     // ── UI actions ─────────────────────────────────────────────────────────
     setGizmoMode: (mode) => set({ gizmoMode: mode }),
+    setSimulationPrompt: (prompt) => set({ simulationPrompt: prompt }),
     toggleDrawingPath: () => {
       const { selection, drawingPath } = get();
       if (!drawingPath && selection?.kind !== 'actor') return;

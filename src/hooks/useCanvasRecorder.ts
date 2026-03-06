@@ -90,6 +90,7 @@ export function useCanvasRecorder(renderPass: RenderPass): void {
     const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
     const form = new FormData();
     form.append('depth', depthBlob, `depth.${ext}`);
+    form.append('prompt', store.simulationPrompt);
 
     try {
       const res = await fetch('http://192.168.50.124:8000/render', {

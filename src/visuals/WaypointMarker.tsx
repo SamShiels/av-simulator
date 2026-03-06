@@ -38,7 +38,9 @@ export default function WaypointMarker({ waypoint, color, selected, onPress, onS
       -((e.clientY - rect.top) / rect.height) * 2 + 1,
     );
     rc.current.setFromCamera(ndc, camera);
-    if (!rc.current.ray.intersectPlane(GROUND, hitPt.current)) return null;
+    if (!rc.current.ray.intersectPlane(GROUND, hitPt.current)) {
+      return null;
+    }
     return [hitPt.current.x, 0, hitPt.current.z];
   }
 
@@ -79,7 +81,7 @@ export default function WaypointMarker({ waypoint, color, selected, onPress, onS
   return (
     <group position={[px, py + HOVER_Y, pz]}>
       {/* Pole */}
-      <mesh position={[0, POLE_HEIGHT / 2, 0]}>
+      <mesh position={[0, POLE_HEIGHT / 2, 0]} renderOrder={1}>
         <cylinderGeometry args={[POLE_RADIUS, POLE_RADIUS, POLE_HEIGHT, 6]} />
         <meshBasicMaterial color={selected ? '#ffffff' : color} />
       </mesh>
@@ -87,6 +89,7 @@ export default function WaypointMarker({ waypoint, color, selected, onPress, onS
       {/* Sphere (interactive) */}
       <mesh
         position={[0, POLE_HEIGHT + SPHERE_RADIUS, 0]}
+        renderOrder={1}
         onPointerDown={handlePointerDown}
         onPointerEnter={(e: ThreeEvent<PointerEvent>) => {
           e.stopPropagation();
