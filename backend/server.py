@@ -30,7 +30,9 @@ app.add_middleware(
 def get_frame_count(video_bytes: bytes) -> int:
     with av.open(io.BytesIO(video_bytes)) as container:
         stream = container.streams.video[0]
-        return stream.frames
+        if stream.frames:
+            return stream.frames
+        return sum(1 for _ in container.decode(stream))
 
 
 def upload_to_comfy(file_bytes: bytes, filename: str) -> str:
@@ -86,15 +88,18 @@ def fetch_output_video(prompt_id: str) -> bytes:
 @app.post("/render")
 def render(
     depth: UploadFile = File(...),
+    rgb: UploadFile = File(...),
     prompt: str = Form(default="Photorealistic dashcam footage, driving down a road, heavy rain, glowing streetlights reflecting on wet asphalt, cinematic lighting, 8k resolution."),
 ):
     depth_bytes = depth.file.read()
     length = get_frame_count(depth_bytes)
     depth_name = upload_to_comfy(depth_bytes, depth.filename or "depth.mp4")
+    rgb_name = upload_to_comfy(rgb.file.read(), rgb.filename or "rgb.mp4")
 
     with open(WORKFLOW_PATH) as f:
         workflow = json.load(f)
 
+    workflow["1"]["inputs"]["video"] = rgb_name
     workflow["2"]["inputs"]["video"] = depth_name
     workflow["5"]["inputs"]["text"] = prompt
     workflow["8"]["inputs"]["length"] = length

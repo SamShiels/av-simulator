@@ -28,6 +28,8 @@ export function useCanvasRecorder(renderPass: RenderPass): void {
   const { gl } = useThree();
   const recorderRef = useRef<MediaRecorder | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const depthBlobRef = useRef<Blob | null>(null);
+  const recordingPassRef = useRef<'depth' | 'rgb' | null>(null);
 
   const renderStatus = useEditorStore(s => s.renderStatus);
 
@@ -40,8 +42,8 @@ export function useCanvasRecorder(renderPass: RenderPass): void {
   }, [renderStatus]);
 
   useEffect(() => {
-    if (renderPass !== 'idle') {
-      startRecording();
+    if (renderPass === 'depth' || renderPass === 'rgb') {
+      startRecording(renderPass);
     } else {
       stopRecording();
     }
@@ -49,7 +51,9 @@ export function useCanvasRecorder(renderPass: RenderPass): void {
     return () => stopRecording();
   }, [renderPass]);
 
-  function startRecording(): void {
+  function startRecording(pass: 'depth' | 'rgb'): void {
+    recordingPassRef.current = pass;
+
     const canvas = gl.domElement;
     const mimeType = pickMimeType();
 
@@ -65,22 +69,32 @@ export function useCanvasRecorder(renderPass: RenderPass): void {
     recorder.onstop = () => {
       stream.getTracks().forEach(track => track.stop());
 
-      const depthBlob = new Blob(chunks, { type: mimeType });
-      if (depthBlob.size === 0) return;
+      const blob = new Blob(chunks, { type: mimeType });
+      if (blob.size === 0) return;
 
-      // Only upload if not cancelled
       const { renderStatus: status } = useEditorStore.getState();
       if (status !== 'rendering') return;
 
-      console.log('[recorder] depth blob:', URL.createObjectURL(depthBlob));
-      uploadRender(depthBlob, mimeType);
+      const completedPass = recordingPassRef.current;
+
+      if (completedPass === 'depth') {
+        depthBlobRef.current = blob;
+        console.log('[recorder] depth blob:', URL.createObjectURL(blob));
+        useEditorStore.getState().setScenarioProgress(0);
+        useEditorStore.getState().setRenderPass('rgb');
+      } else if (completedPass === 'rgb') {
+        const depthBlob = depthBlobRef.current;
+        if (!depthBlob) return;
+        console.log('[recorder] rgb blob:', URL.createObjectURL(blob));
+        uploadRender(depthBlob, blob, mimeType);
+      }
     };
 
     recorder.start();
     recorderRef.current = recorder;
   }
 
-  async function uploadRender(depthBlob: Blob, mimeType: string): Promise<void> {
+  async function uploadRender(depthBlob: Blob, rgbBlob: Blob, mimeType: string): Promise<void> {
     const store = useEditorStore.getState();
     store.setRenderStatus('uploading');
 
@@ -90,6 +104,7 @@ export function useCanvasRecorder(renderPass: RenderPass): void {
     const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
     const form = new FormData();
     form.append('depth', depthBlob, `depth.${ext}`);
+    form.append('rgb', rgbBlob, `rgb.${ext}`);
     form.append('prompt', store.simulationPrompt);
 
     try {

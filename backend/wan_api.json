@@ -91,7 +91,7 @@
     "inputs": {
       "width": 832,
       "height": 480,
-      "length": 200,
+      "length": 49,
       "batch_size": 1,
       "positive": [
         "5",
@@ -118,8 +118,8 @@
   "9": {
     "inputs": {
       "seed": 448606391046303,
-      "steps": 30,
-      "cfg": 4,
+      "steps": 25,
+      "cfg": 2.5,
       "sampler_name": "euler",
       "scheduler": "normal",
       "denoise": 1,
@@ -181,6 +181,22 @@
     "class_type": "VHS_VideoCombine",
     "_meta": {
       "title": "Video Combine 🎥🅥🅗🅢"
+    }
+  },
+  "12": {
+    "inputs": {
+      "pixels": [
+        "1",
+        0
+      ],
+      "vae": [
+        "3",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
     }
   }
 }

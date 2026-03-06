@@ -6,7 +6,7 @@ import type { RenderPass } from '../App';
 // View-space Z range (units) to map to white→black.
 // Camera is at [10,10,10] looking at origin; scene objects sit between
 // ~12 (near tiles) and ~35 (far-edge tiles). Tune these if the output
-// looks too bright or too dark overall.
+// https://gemini.google.com/app/115683dc6d5cd929// looks too bright or too dark overall.
 const DEPTH_NEAR = 0.1;   // objects closer than this → pure white
 const DEPTH_FAR  = 20;  // objects farther than this → pure black
 
