@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useEditorStore } from '../store/useEditorStore';
+import { saveScene, loadScene } from '../io/sceneFile';
 
 function CogIcon() {
   return (
@@ -13,6 +14,7 @@ function CogIcon() {
 export default function SimSettings() {
   const [open, setOpen] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const simulationPrompt = useEditorStore(s => s.simulationPrompt);
   const setSimulationPrompt = useEditorStore(s => s.setSimulationPrompt);
 
@@ -47,6 +49,33 @@ export default function SimSettings() {
             onChange={e => setSimulationPrompt(e.target.value)}
             rows={5}
             className="w-full bg-black/30 text-white text-xs rounded-lg p-2 border border-white/15 resize-none focus:outline-none focus:border-white/40 placeholder:text-white/30"
+          />
+
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={saveScene}
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-all"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="flex-1 py-1.5 rounded-lg text-xs font-medium bg-white/10 text-white/70 hover:bg-white/20 hover:text-white transition-all"
+            >
+              Load
+            </button>
+          </div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={e => {
+              const file = e.target.files?.[0];
+              if (file) { loadScene(file); setOpen(false); }
+              e.target.value = '';
+            }}
           />
         </div>
       )}
