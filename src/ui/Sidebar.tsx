@@ -1,7 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
+import { Canvas } from '@react-three/fiber';
 import { cn } from '@/lib/utils';
 import type { RoadType, SceneryType } from '../App';
 import type { ActorKind } from '../scenario/types';
+import { RoadTileModel } from '../visuals/RoadTile';
+import { SceneryModel } from '../visuals/SceneryMesh';
+import { PedestrianMesh, StrollerMesh, VehicleMesh } from '../visuals/ActorMesh';
 import { useEditorStore, selectionTileId, selectionSceneryId } from '../store/useEditorStore';
 
 const ROAD_TYPES: { type: RoadType; label: string }[] = [
@@ -16,11 +20,47 @@ const SCENERY_TYPES: { type: SceneryType; label: string }[] = [
   { type: 'building-c', label: 'Building C' },
 ];
 
-const ACTOR_KINDS: { kind: ActorKind; label: string }[] = [
-  { kind: 'pedestrian', label: 'Pedestrian' },
-  { kind: 'stroller',   label: 'Stroller' },
-  { kind: 'vehicle',    label: 'Vehicle' },
+const ACTOR_KINDS: { kind: ActorKind; label: string; cameraPos: [number, number, number] }[] = [
+  { kind: 'pedestrian', label: 'Pedestrian', cameraPos: [1.5, 2.5, 2] },
+  { kind: 'stroller',   label: 'Stroller',   cameraPos: [1.5, 2, 2] },
+  { kind: 'vehicle',    label: 'Vehicle',     cameraPos: [4, 4, 5] },
 ];
+
+function TilePreview({ roadType }: { roadType: RoadType }) {
+  return (
+    <Canvas camera={{ position: [0, 4, 0], fov: 40, up: [0, 0, -1] }} gl={{ antialias: true, alpha: true }}>
+      <ambientLight intensity={2} />
+      <directionalLight position={[3, 6, 3]} intensity={1} />
+      <Suspense fallback={null}>
+        <RoadTileModel roadType={roadType} rotation={0} ghost={false} />
+      </Suspense>
+    </Canvas>
+  );
+}
+
+function SceneryPreview({ sceneryType }: { sceneryType: SceneryType }) {
+  return (
+    <Canvas camera={{ position: [4, 6, 4], fov: 40 }} gl={{ antialias: true, alpha: true }}>
+      <ambientLight intensity={2} />
+      <directionalLight position={[3, 6, 3]} intensity={1} />
+      <Suspense fallback={null}>
+        <SceneryModel sceneryType={sceneryType} rotation={0} ghost={false} />
+      </Suspense>
+    </Canvas>
+  );
+}
+
+function ActorPreview({ kind, cameraPos }: { kind: ActorKind; cameraPos: [number, number, number] }) {
+  return (
+    <Canvas camera={{ position: cameraPos, fov: 40 }} gl={{ antialias: true, alpha: true }}>
+      <ambientLight intensity={2} />
+      <directionalLight position={[3, 6, 3]} intensity={1} />
+      {kind === 'pedestrian' && <PedestrianMesh color="#9ca3af" />}
+      {kind === 'stroller'   && <StrollerMesh   color="#9ca3af" />}
+      {kind === 'vehicle'    && <VehicleMesh     color="#9ca3af" />}
+    </Canvas>
+  );
+}
 
 function PlacementDropdown() {
   const [open, setOpen] = useState(false);
@@ -95,12 +135,13 @@ function PlacementDropdown() {
               key={type}
               onClick={() => handleRoadClick(type)}
               className={cn(
-                'w-full text-left px-3 py-1.5 text-xs transition-all',
+                'w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs transition-all',
                 selectedRoadType === type
                   ? 'bg-white/20 text-white'
                   : 'text-white/60 hover:bg-white/10 hover:text-white',
               )}
             >
+              <div className="w-7 h-7 rounded shrink-0 overflow-hidden"><TilePreview roadType={type} /></div>
               {label}
             </button>
           ))}
@@ -111,23 +152,25 @@ function PlacementDropdown() {
               key={type}
               onClick={() => handleSceneryClick(type)}
               className={cn(
-                'w-full text-left px-3 py-1.5 text-xs transition-all',
+                'w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs transition-all',
                 selectedSceneryType === type
                   ? 'bg-white/20 text-white'
                   : 'text-white/60 hover:bg-white/10 hover:text-white',
               )}
             >
+              <div className="w-7 h-7 rounded shrink-0 overflow-hidden"><SceneryPreview sceneryType={type} /></div>
               {label}
             </button>
           ))}
 
           <p className="text-[10px] font-semibold tracking-widest uppercase text-white/40 px-3 pt-3 pb-1">Actors</p>
-          {ACTOR_KINDS.map(({ kind, label }) => (
+          {ACTOR_KINDS.map(({ kind, label, cameraPos }) => (
             <button
               key={kind}
               onClick={() => handleActorClick(kind)}
-              className="w-full text-left px-3 py-1.5 text-xs text-white/60 hover:bg-white/10 hover:text-white transition-all"
+              className="w-full text-left flex items-center gap-2 px-3 py-1.5 text-xs text-white/60 hover:bg-white/10 hover:text-white transition-all"
             >
+              <div className="w-7 h-7 rounded shrink-0 overflow-hidden"><ActorPreview kind={kind} cameraPos={cameraPos} /></div>
               {label}
             </button>
           ))}
