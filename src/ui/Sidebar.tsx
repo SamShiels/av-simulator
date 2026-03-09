@@ -107,6 +107,7 @@ export default function Sidebar() {
   const selectRoadType = useEditorStore(s => s.selectRoadType);
   const selectSceneryType = useEditorStore(s => s.selectSceneryType);
   const addActor = useEditorStore(s => s.addActor);
+  const setDrawingPath = useEditorStore(s => s.setDrawingPath);
 
   function handleTileClick(type: RoadType) {
     selectRoadType(selectedRoadType === type ? null : type);
@@ -124,7 +125,10 @@ export default function Sidebar() {
           {ACTOR_KINDS.map(({ kind, label, cameraPos }) => (
             <button
               key={kind}
-              onClick={() => addActor(kind)}
+              onClick={() => {
+                addActor(kind);
+                setDrawingPath(false);
+              }}
               className="flex flex-col items-center gap-1 p-1.5 rounded-lg transition-all text-xs font-medium text-white/50 hover:bg-white/10 hover:text-white"
             >
               <div className="w-full aspect-square rounded-md overflow-hidden">
@@ -141,7 +145,10 @@ export default function Sidebar() {
           {ROAD_TYPES.map(({ type, label }) => (
             <button
               key={type}
-              onClick={() => handleTileClick(type)}
+              onClick={() => {
+                handleTileClick(type);
+                setDrawingPath(false);
+              }}
               className={cn(
                 'flex flex-col items-center gap-1.5 p-2 rounded-lg transition-all text-sm font-medium',
                 selectedRoadType === type
@@ -163,7 +170,10 @@ export default function Sidebar() {
           {SCENERY_TYPES.map(({ type, label }) => (
             <button
               key={type}
-              onClick={() => handleSceneryClick(type)}
+              onClick={() => {
+                handleSceneryClick(type);
+                setDrawingPath(false);
+              }}
               className={cn(
                 'flex flex-col items-center gap-1.5 p-2 rounded-lg transition-all text-sm font-medium',
                 selectedSceneryType === type

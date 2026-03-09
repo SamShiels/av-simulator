@@ -16,6 +16,7 @@ export default function InspectorPanel() {
   const setEgoStats = useEditorStore(s => s.setEgoStats);
   const selectActor = useEditorStore(s => s.selectActor);
   const selectBlock = useEditorStore(s => s.selectBlock);
+  const setDrawingPath = useEditorStore(s => s.setDrawingPath);
   const selectSceneryItem = useEditorStore(s => s.selectSceneryItem);
   const selectRoadType = useEditorStore(s => s.selectRoadType);
   const removeActor = useEditorStore(s => s.removeActor);
@@ -133,7 +134,11 @@ export default function InspectorPanel() {
           return (
             <div
               key={block.id}
-              onClick={() => { selectBlock(block.id); selectRoadType(null); }}
+              onClick={() => { 
+                selectBlock(block.id); 
+                selectRoadType(null);
+                setDrawingPath(false);
+              }}
               className={cn(
                 'flex items-center gap-2 px-2 py-1.5 rounded-lg cursor-pointer text-xs transition-all',
                 isSelected ? 'bg-white/20 text-white' : 'text-white/50 hover:text-white hover:bg-white/10',

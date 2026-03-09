@@ -138,6 +138,7 @@ interface EditorActions {
   // UI
   setGizmoMode: (mode: GizmoMode) => void;
   toggleDrawingPath: () => void;
+  setDrawingPath: (isDrawing: boolean) => void;
   setSimulationPrompt: (prompt: string) => void;
 }
 
@@ -213,7 +214,12 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
       set({ blocks: [...blocks, newBlock] });
     },
 
-    selectBlock: (id) => set({ selection: { kind: 'tile', id }, drawingPath: false, selectedWaypointId: null, selectedWaypointActorId: null, waypointPopupPos: null }),
+    selectBlock: (id) => {
+      const { drawingPath } = get();
+      if (!drawingPath) {
+        set({ selection: { kind: 'tile', id }, selectedWaypointId: null, selectedWaypointActorId: null, waypointPopupPos: null });
+      }
+    },
     deselectBlock: () => set({ selection: { kind: 'actor', id: 'ego' }, drawingPath: false, selectedWaypointId: null, selectedWaypointActorId: null, waypointPopupPos: null }),
 
     moveBlock: (id, pos) => {
@@ -266,7 +272,12 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
 
     rotateSceneryGhost: () => set(s => ({ sceneryGhostRotation: (s.sceneryGhostRotation + 1) % 4 })),
 
-    selectSceneryItem: (id) => set({ selection: { kind: 'scenery', id }, drawingPath: false, selectedWaypointId: null, selectedWaypointActorId: null, waypointPopupPos: null }),
+    selectSceneryItem: (id) => {
+      const { drawingPath } = get();
+      if (!drawingPath) {
+        set({ selection: { kind: 'scenery', id }, drawingPath: false, selectedWaypointId: null, selectedWaypointActorId: null, waypointPopupPos: null });
+      }
+    },
 
     moveSceneryItem: (id, pos) => {
       const { sceneryItems } = get();
@@ -489,6 +500,11 @@ export const useEditorStore = create<EditorStore>()((set, get) => {
         drawingPath: !drawingPath,
         ...(disabling ? { selectedWaypointId: null, selectedWaypointActorId: null, waypointPopupPos: null } : {}),
       });
+    },
+    setDrawingPath(isDrawing: boolean) {
+      set({
+        drawingPath: isDrawing,
+      })
     },
   };
 });
