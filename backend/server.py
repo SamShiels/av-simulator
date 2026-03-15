@@ -85,14 +85,30 @@ def fetch_output_video(prompt_id: str) -> bytes:
     return data
 
 
+def patch_edge_into_workflow(workflow: dict, edge_name: str) -> None:
+    workflow["12"]["inputs"]["video"] = edge_name
+
+
+def strip_edge_from_workflow(workflow: dict) -> None:
+    workflow["8"]["inputs"]["control_video"] = ["6", 0]
+    workflow.pop("12", None)
+    workflow.pop("13", None)
+
+
 @app.post("/render")
 def render(
     depth: UploadFile = File(...),
+    edge: UploadFile = File(None),
     prompt: str = Form(default="Photorealistic dashcam footage, driving down a road, heavy rain, glowing streetlights reflecting on wet asphalt, cinematic lighting, 8k resolution."),
 ):
     depth_bytes = depth.file.read()
     length = get_frame_count(depth_bytes)
     depth_name = upload_to_comfy(depth_bytes, depth.filename or "depth.mp4")
+
+    edge_name = None
+    if edge is not None:
+        edge_bytes = edge.file.read()
+        edge_name = upload_to_comfy(edge_bytes, edge.filename or "edge.mp4")
 
     with open(WORKFLOW_PATH) as f:
         workflow = json.load(f)
@@ -101,6 +117,11 @@ def render(
     workflow["6"]["inputs"]["video"] = depth_name
     workflow["7"]["inputs"]["image"] = "dash.jpg"
     workflow["8"]["inputs"]["length"] = length
+
+    if edge_name is not None:
+        patch_edge_into_workflow(workflow, edge_name)
+    else:
+        strip_edge_from_workflow(workflow)
 
     prompt_id = queue_prompt(workflow)
     print(f"Job queued: {prompt_id}")

@@ -29,7 +29,8 @@ export function useCanvasRecorder(renderPass: RenderPass): void {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const depthBlobRef = useRef<Blob | null>(null);
-  const recordingPassRef = useRef<'depth' | 'rgb' | null>(null);
+  const edgeBlobRef = useRef<Blob | null>(null);
+  const recordingPassRef = useRef<'depth' | 'edge' | 'rgb' | null>(null);
 
   const renderStatus = useEditorStore(s => s.renderStatus);
 
@@ -42,7 +43,7 @@ export function useCanvasRecorder(renderPass: RenderPass): void {
   }, [renderStatus]);
 
   useEffect(() => {
-    if (renderPass === 'depth' || renderPass === 'rgb') {
+    if (renderPass === 'depth' || renderPass === 'edge' || renderPass === 'rgb') {
       startRecording(renderPass);
     } else {
       stopRecording();
@@ -51,7 +52,7 @@ export function useCanvasRecorder(renderPass: RenderPass): void {
     return () => stopRecording();
   }, [renderPass]);
 
-  function startRecording(pass: 'depth' | 'rgb'): void {
+  function startRecording(pass: 'depth' | 'edge' | 'rgb'): void {
     recordingPassRef.current = pass;
 
     const canvas = gl.domElement;
@@ -81,12 +82,18 @@ export function useCanvasRecorder(renderPass: RenderPass): void {
         depthBlobRef.current = blob;
         console.log('[recorder] depth blob:', URL.createObjectURL(blob));
         useEditorStore.getState().setScenarioProgress(0);
+        useEditorStore.getState().setRenderPass('edge');
+      } else if (completedPass === 'edge') {
+        edgeBlobRef.current = blob;
+        console.log('[recorder] edge blob:', URL.createObjectURL(blob));
+        useEditorStore.getState().setScenarioProgress(0);
         useEditorStore.getState().setRenderPass('rgb');
       } else if (completedPass === 'rgb') {
         const depthBlob = depthBlobRef.current;
-        if (!depthBlob) return;
+        const edgeBlob = edgeBlobRef.current;
+        if (!depthBlob || !edgeBlob) return;
         console.log('[recorder] rgb blob:', URL.createObjectURL(blob));
-        uploadRender(depthBlob, blob, mimeType);
+        uploadRender(depthBlob, edgeBlob, blob, mimeType);
       }
     };
 
@@ -94,7 +101,7 @@ export function useCanvasRecorder(renderPass: RenderPass): void {
     recorderRef.current = recorder;
   }
 
-  async function uploadRender(depthBlob: Blob, rgbBlob: Blob, mimeType: string): Promise<void> {
+  async function uploadRender(depthBlob: Blob, edgeBlob: Blob, rgbBlob: Blob, mimeType: string): Promise<void> {
     const store = useEditorStore.getState();
     store.setRenderStatus('uploading');
 
@@ -104,6 +111,7 @@ export function useCanvasRecorder(renderPass: RenderPass): void {
     const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
     const form = new FormData();
     form.append('depth', depthBlob, `depth.${ext}`);
+    form.append('edge', edgeBlob, `edge.${ext}`);
     form.append('rgb', rgbBlob, `rgb.${ext}`);
     form.append('prompt', store.simulationPrompt);
 

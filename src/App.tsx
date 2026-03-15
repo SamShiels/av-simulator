@@ -13,7 +13,7 @@ import { useEditorStore } from './store/useEditorStore';
 export type RoadType = 'straight' | 'corner' | 'pavement';
 export type SceneryType = 'building-a' | 'building-b' | 'building-c';
 export type GizmoMode = 'translate' | 'rotate';
-export type RenderPass = 'idle' | 'rgb' | 'depth';
+export type RenderPass = 'idle' | 'rgb' | 'depth' | 'edge';
 
 export interface Block {
   id: string;

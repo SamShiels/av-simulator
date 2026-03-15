@@ -13,6 +13,7 @@ import { useScenarioMouseControls } from './hooks/useScenarioMouseControls';
 import { useEditorStore, selectionActorId, selectionTileId, selectionSceneryId } from './store/useEditorStore';
 import { useCanvasRecorder } from './hooks/useCanvasRecorder';
 import { useDepthPass } from './hooks/useDepthPass';
+import { useEdgePass } from './hooks/useEdgePass';
 
 const GHOST_WP_POLE_HEIGHT = 0.6;
 const GHOST_WP_SPHERE_RADIUS = 0.18;
@@ -69,6 +70,7 @@ export default function Scene() {
 
   useCanvasRecorder(renderPass);
   useDepthPass(renderPass);
+  useEdgePass(renderPass);
   const [cursorPos, setCursorPos] = useState<[number, number, number] | null>(null);
 
   const { ghost, isDraggingGizmoRef } = useSceneMouseControls({

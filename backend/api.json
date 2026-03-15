@@ -99,7 +99,7 @@
         0
       ],
       "control_video": [
-        "6",
+        "13",
         0
       ],
       "reference_image": [
@@ -178,6 +178,40 @@
     "class_type": "VHS_VideoCombine",
     "_meta": {
       "title": "Video Combine"
+    }
+  },
+  "12": {
+    "inputs": {
+      "video": "edge_video.mp4",
+      "force_rate": 0,
+      "custom_width": 832,
+      "custom_height": 480,
+      "frame_load_cap": 49,
+      "skip_first_frames": 0,
+      "select_every_nth": 1,
+      "format": "Wan"
+    },
+    "class_type": "VHS_LoadVideo",
+    "_meta": {
+      "title": "Load Edge Video"
+    }
+  },
+  "13": {
+    "inputs": {
+      "image1": [
+        "6",
+        0
+      ],
+      "image2": [
+        "12",
+        0
+      ],
+      "blend_factor": 0.5,
+      "blend_mode": "screen"
+    },
+    "class_type": "ImageBlend",
+    "_meta": {
+      "title": "Blend Depth + Edge"
     }
   }
 }

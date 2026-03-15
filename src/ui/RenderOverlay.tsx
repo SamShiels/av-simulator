@@ -3,6 +3,7 @@ import { Button } from '../components/ui/button';
 
 function statusLabel(renderPass: string, renderStatus: string): string {
   if (renderPass === 'rgb') return 'Rendering RGB pass…';
+  if (renderPass === 'edge') return 'Rendering edge pass…';
   if (renderPass === 'depth') return 'Rendering depth pass…';
   if (renderStatus === 'uploading') return 'Uploading to ComfyUI…';
   if (renderStatus === 'error') return 'Upload failed';
