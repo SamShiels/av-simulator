@@ -45,26 +45,18 @@ https://github.com/user-attachments/assets/66c05525-7114-4be3-bfe7-4d3c1120a995
 ### Frontend
 
 ```bash
-npm install
-npm run dev        # http://localhost:5173
+yarn
+yarn dev        # http://localhost:5173
 ```
 
 ### Backend
 
 ```bash
 cd backend
-pip install -r requirements.txt
-python server.py   # http://localhost:8000
+docker compose up
 ```
 
 Requires a running ComfyUI instance at `http://127.0.0.1:8188`. See [backend/api.json](backend/api.json) for the workflow and models used.
-
-Alternatively, use Docker:
-
-```bash
-cd backend
-docker-compose up
-```
 
 ## Project Structure
 
