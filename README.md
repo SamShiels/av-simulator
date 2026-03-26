@@ -5,16 +5,13 @@ An interactive 3D scene editor for scripting autonomous EV testing scenarios. De
 ## Demo
 
 ### Path Editing
-
-<video src="docs/path.webm" controls></video>
+[path.webm](https://github.com/user-attachments/assets/8240a6a0-f881-40bd-84ba-0ac7769d94c7)
 
 ### Rendering
-
-<video src="docs/rendering.webm" controls></video>
+[rendering.webm](https://github.com/user-attachments/assets/c114d1f4-3f82-45a4-ade0-a6bb78f0abd5)
 
 ### Example Output
-
-<video src="docs/example.mp4" controls></video>
+https://github.com/user-attachments/assets/66c05525-7114-4be3-bfe7-4d3c1120a995
 
 ## How It Works
 
